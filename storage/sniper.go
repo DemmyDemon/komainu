@@ -18,21 +18,21 @@ type SniperData struct {
 // Sniper returns (or creates) the Sniper instance for storage needs.
 func OpenSniper(path string) (*SniperData, error) {
 
-	if newSniper, err := sniper.Open(sniper.Dir(path)); err != nil {
+	newSniper, err := sniper.Open(sniper.Dir(path))
+	if err != nil {
 		return nil, err
-	} else {
-		return &SniperData{
-			sniper: newSniper,
-		}, nil
 	}
+	return &SniperData{
+		sniper: newSniper,
+	}, nil
 }
 
 func (sd *SniperData) Open(path string) error {
-	if newSniper, err := sniper.Open(sniper.Dir(path)); err != nil {
+	newSniper, err := sniper.Open(sniper.Dir(path))
+	if err != nil {
 		return err
-	} else {
-		sd.sniper = newSniper
 	}
+	sd.sniper = newSniper
 	return nil
 }
 
@@ -48,15 +48,14 @@ func (sd *SniperData) Close() error {
 // Get gets []byte data from Sniper.
 func (sd *SniperData) Get(guild discord.GuildID, collection string, key interface{}) (bool, []byte, error) {
 	finalKey := sd.BuildFinalKey(guild, collection, key)
-	if val, err := sd.sniper.Get(finalKey); err != nil {
+	val, err := sd.sniper.Get(finalKey)
+	if err != nil {
 		if err == sniper.ErrNotFound {
 			return false, nil, nil
-		} else {
-			return false, nil, err
 		}
-	} else {
-		return true, val, nil
+		return false, nil, err
 	}
+	return true, val, nil
 }
 
 // Set smushes data into Sniper using a rubber mallet and lube.
@@ -108,13 +107,14 @@ func (sd *SniperData) GetObject(guild discord.GuildID, collection string, key in
 
 // GetString gets data from Sniper, assumes it's a string, and gives it to you.
 func (sd *SniperData) GetString(guild discord.GuildID, collection string, key interface{}) (bool, string, error) {
-	if exist, value, err := sd.Get(guild, collection, key); err != nil {
+	exist, value, err := sd.Get(guild, collection, key)
+	if err != nil {
 		return false, "", err
-	} else if !exist {
-		return exist, "", nil
-	} else {
-		return exist, string(value), nil
 	}
+	if !exist {
+		return exist, "", nil
+	}
+	return exist, string(value), nil
 }
 
 // GetInt64 gets data from Sniper, forces it to pretend to be an int64, and hands it to you.
@@ -125,14 +125,15 @@ func (sd *SniperData) GetInt64(guild discord.GuildID, collection string, key int
 
 // GetUint64 gets data from Sniper, assumes it's a little endian uint64 and passes it to you as such.
 func (sd *SniperData) GetUint64(guild discord.GuildID, collection string, key interface{}) (bool, uint64, error) {
-	if exist, value, err := sd.Get(guild, collection, key); err != nil {
+	exist, value, err := sd.Get(guild, collection, key)
+	if err != nil {
 		return false, 0, err
-	} else if !exist {
-		return exist, 0, nil
-	} else {
-		finalValue := binary.LittleEndian.Uint64(value)
-		return exist, finalValue, nil
 	}
+	if !exist {
+		return exist, 0, nil
+	}
+	finalValue := binary.LittleEndian.Uint64(value)
+	return exist, finalValue, nil
 }
 
 // Delete permanently removes the indicated guild/collection/key from Sniper

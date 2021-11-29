@@ -17,13 +17,15 @@ type JSONStorable interface {
 
 // JSONFileExists checks if the given JSONStorable's .Path() points to a file that already exists.
 func JSONFileExists(storable JSONStorable) (bool, error) {
-	if _, err := os.Stat(storable.Path()); err == nil {
-		return true, nil
-	} else if os.IsNotExist(err) {
-		return false, nil
-	} else {
+	_, err := os.Stat(storable.Path())
+
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
 		return false, err
 	}
+	return true, nil
 }
 
 // MarshalJSON is a function that marshals the object into an io.Reader.

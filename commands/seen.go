@@ -27,14 +27,16 @@ func CommandSeen(state *state.State, sniper storage.KeyValueStore, event *gatewa
 		} else if me.ID == discord.UserID(option) {
 			return ResponseMessage("I'm right here, buddy!")
 		}
-		if found, timestamp, err := storage.LastSeen(sniper, event.GuildID, discord.UserID(option)); err != nil {
+
+		found, timestamp, err := storage.LastSeen(sniper, event.GuildID, discord.UserID(option))
+		if err != nil {
 			log.Printf("[%s] Failed to get %s from Sniper for /seen lookup: %s\n", event.GuildID, option, err)
 			return ResponseMessage("An error occured, and has been logged.")
-		} else if !found {
-			return ResponseMessageNoMention(fmt.Sprintf("Sorry, I've never seen <@%s> say anything at all!", option))
-		} else {
-			return ResponseMessageNoMention(fmt.Sprintf("I last saw <@%s> <t:%d:R>", option, timestamp))
 		}
+		if !found {
+			return ResponseMessageNoMention(fmt.Sprintf("Sorry, I've never seen <@%s> say anything at all!", option))
+		}
+		return ResponseMessageNoMention(fmt.Sprintf("I last saw <@%s> <t:%d:R>", option, timestamp))
 	}
 	return ResponseMessage("No user given?!")
 }
