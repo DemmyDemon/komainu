@@ -53,26 +53,40 @@ var commands = map[string]Command{
 			Required:    true,
 		},
 	}},
-	"faqon": {"faq", "Add a topic to the FAQ", CommandFaqOn, []discord.CommandOption{
-		&discord.StringOption{
-			OptionName:  "topic",
-			Description: "The word used to recall this item later",
-			Required:    true,
+	"faqset": {"faqadmin", "Manage FAQ topics", CommandFaqSet, []discord.CommandOption{
+		&discord.SubcommandOption{
+			OptionName:  "add",
+			Description: "Add a topic to the FAQ",
+			Options: []discord.CommandOptionValue{
+				&discord.StringOption{
+					OptionName:  "topic",
+					Description: "The word used to recall this item later",
+					Required:    true,
+				},
+				&discord.StringOption{
+					OptionName:  "content",
+					Description: "What you want the topic to contain",
+					Required:    true,
+				},
+			},
 		},
-		&discord.StringOption{
-			OptionName:  "content",
-			Description: "What you want the topic to contain",
-			Required:    true,
+		&discord.SubcommandOption{
+			OptionName:  "remove",
+			Description: "Remove a topic from the FAQ",
+			Options: []discord.CommandOptionValue{
+				&discord.StringOption{
+					OptionName:  "topic",
+					Description: "What do you want to permanently obliterate from the FAQ?",
+					Required:    true,
+				},
+			},
+		},
+		&discord.SubcommandOption{
+			OptionName:  "list",
+			Description: "List the known topics in the FAQ",
+			Options:     []discord.CommandOptionValue{},
 		},
 	}},
-	"faqoff": {"faq", "Remove a topic from the FAQ", CommandFaqOff, []discord.CommandOption{
-		&discord.StringOption{
-			OptionName:  "topic",
-			Description: "What do you want to permanently obliterate from the FAQ?",
-			Required:    true,
-		},
-	}},
-	"faqlist": {"faq", "List the FAQ topics", CommandFaqList, []discord.CommandOption{}},
 
 	// "vote": {"vote", "Initiate a vote", CommandVote, []discord.CommandOption{}},
 }
