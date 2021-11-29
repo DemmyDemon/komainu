@@ -127,6 +127,7 @@ func (sd *SniperData) GetUint64(guild discord.GuildID, collection string, key in
 	}
 }
 
+// Delete permanently removes the indicated guild/collection/key from Sniper
 func (sd *SniperData) Delete(guild discord.GuildID, collection string, key interface{}) (bool, error) {
 	finalKey := BuildFinalKey(guild, collection, key)
 	return sd.sniper.Delete(finalKey)
