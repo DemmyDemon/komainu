@@ -39,6 +39,7 @@ func Connect(cfg *storage.Configuration) *state.State {
 	})
 
 	state.AddIntents(gateway.IntentGuilds |
+		gateway.IntentGuildMembers |
 		gateway.IntentGuildBans |
 		gateway.IntentGuildEmojis |
 		gateway.IntentGuildIntegrations |

@@ -46,10 +46,13 @@ func CommandInactive(state *state.State, event *gateway.InteractionCreateEvent, 
 			log.Printf("[%s] Failed to get int value for /inactive: %s", event.GuildID, err)
 			return ResponseMessage("An error occured, and has been logged.")
 		}
+		if d <= 0 {
+			return ResponseMessage(fmt.Sprintf("Everyone. Everyone has been inactive for %d days.", d))
+		}
 		days = d
 	}
 	atLeast := time.Now().Unix() - (24 * 3600 * days)
-	members, err := state.Members(event.GuildID)
+	members, err := state.Session.Members(event.GuildID, 0)
 	if err != nil {
 		log.Printf("[%s] Failed to get member list for /inactive lookup: %s", event.GuildID, err)
 		return ResponseMessage("An error occured, and has been logged.")
