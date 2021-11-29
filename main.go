@@ -16,8 +16,8 @@ func main() {
 		log.SetFlags(log.Lshortfile | log.Ltime)
 	}
 
-	cwd_override := os.Getenv("CWD_OVERRIDE")
-	if cwd_override == "" {
+	cwdOverride := os.Getenv("CWD_OVERRIDE")
+	if cwdOverride == "" {
 		exec, err := os.Executable()
 		if err != nil {
 			log.Fatalln("Failed to get executable path:", err)
@@ -29,8 +29,8 @@ func main() {
 		}
 		log.Printf("Spinning up Komainu in %s\n", path)
 	} else {
-		log.Println("CWD_OVERRIDE in effect: " + cwd_override)
-		err := os.Chdir(cwd_override)
+		log.Println("CWD_OVERRIDE in effect: " + cwdOverride)
+		err := os.Chdir(cwdOverride)
 		if err != nil {
 			log.Fatalln("Failed to change active directory:", err)
 		}
@@ -60,6 +60,6 @@ func main() {
 func WaitForInterrupt() {
 	// Thanks to various Discord Gophers for this very simple stuff.
 	signalCh := make(chan os.Signal, 1)
-	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
+	signal.Notify(signalCh, syscall.SIGTERM, os.Interrupt)
 	<-signalCh
 }
