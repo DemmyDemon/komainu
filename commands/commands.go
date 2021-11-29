@@ -46,10 +46,33 @@ var commands = map[string]Command{
 		},
 	}},
 
-	// "faq":     {"faquser", "Look up a FAQ topic", CommandFaq, []discord.CommandOption{}},
-	// "faqon":   {"faq", "Add a topic to the FAQ", CommandFaqOn, []discord.CommandOption{}},
-	// "faqoff":  {"faq", "Remove a topic from the FAQ", CommandFaqOff, []discord.CommandOption{}},
-	// "faqlist": {"faq", "List the FAQ topics", CommandFaqList, []discord.CommandOption{}},
+	"faq": {"faquser", "Look up a FAQ topic", CommandFaq, []discord.CommandOption{
+		&discord.StringOption{
+			OptionName:  "topic",
+			Description: "The name of the topic you wish to recall",
+			Required:    true,
+		},
+	}},
+	"faqon": {"faq", "Add a topic to the FAQ", CommandFaqOn, []discord.CommandOption{
+		&discord.StringOption{
+			OptionName:  "topic",
+			Description: "The word used to recall this item later",
+			Required:    true,
+		},
+		&discord.StringOption{
+			OptionName:  "content",
+			Description: "What you want the topic to contain",
+			Required:    true,
+		},
+	}},
+	"faqoff": {"faq", "Remove a topic from the FAQ", CommandFaqOff, []discord.CommandOption{
+		&discord.StringOption{
+			OptionName:  "topic",
+			Description: "What do you want to permanently obliterate from the FAQ?",
+			Required:    true,
+		},
+	}},
+	"faqlist": {"faq", "List the FAQ topics", CommandFaqList, []discord.CommandOption{}},
 
 	// "vote": {"vote", "Initiate a vote", CommandVote, []discord.CommandOption{}},
 }
