@@ -11,6 +11,7 @@ import (
 	"github.com/diamondburned/arikawa/v3/state"
 )
 
+// Connect connects to Discord
 func Connect(cfg *storage.Configuration) *state.State {
 	var token = os.Getenv("BOT_TOKEN")
 	if token == "" {

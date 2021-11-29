@@ -55,6 +55,8 @@ func main() {
 
 }
 
+// WaitForInterrupt blocks until a SIGINT, SIGTERM or another OS interrupt is received.
+// "Pause until Ctrl+C", basically.
 func WaitForInterrupt() {
 	// Thanks to various Discord Gophers for this very simple stuff.
 	signalCh := make(chan os.Signal, 1)

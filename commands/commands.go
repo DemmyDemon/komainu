@@ -52,6 +52,7 @@ var commands = map[string]Command{
 	// "vote": {"vote", "Initiate a vote", CommandVote, []discord.CommandOption{}},
 }
 
+// HasAccess checks if the given user has access to the given command group in the given guild.
 func HasAccess(state *state.State, guildID discord.GuildID, channelID discord.ChannelID, member *discord.Member, group string) bool {
 	if member == nil {
 		return false
@@ -76,6 +77,7 @@ func HasAccess(state *state.State, guildID discord.GuildID, channelID discord.Ch
 	return false // If all else fails, they're not authorized.
 }
 
+// AddCommandHandler, surprisingly, adds the command handler.
 func AddCommandHandler(state *state.State) {
 	state.AddHandler(func(e *gateway.InteractionCreateEvent) {
 		command, ok := e.Data.(*discord.CommandInteraction)
@@ -99,6 +101,7 @@ func AddCommandHandler(state *state.State) {
 	})
 }
 
+// RegisterCommands registers the command in the given guild, clearing out any obsolete commands.
 func RegisterCommands(state *state.State, guildID discord.GuildID) {
 	app, err := state.CurrentApplication()
 	if err != nil {

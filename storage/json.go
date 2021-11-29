@@ -15,6 +15,7 @@ type JSONStorable interface {
 	Save() error
 }
 
+// JSONFileExists checks if the given JSONStorable's .Path() points to a file that already exists.
 func JSONFileExists(storable JSONStorable) (bool, error) {
 	if _, err := os.Stat(storable.Path()); err == nil {
 		return true, nil
@@ -25,8 +26,8 @@ func JSONFileExists(storable JSONStorable) (bool, error) {
 	}
 }
 
-// Marshal is a function that marshals the object into an io.Reader.
-func _marshal(storable JSONStorable) (io.Reader, error) {
+// MarshalJSON is a function that marshals the object into an io.Reader.
+func MarshalJSON(storable JSONStorable) (io.Reader, error) {
 
 	resultingBytes, err := json.MarshalIndent(storable, "", "\t")
 	if err != nil {
@@ -36,12 +37,12 @@ func _marshal(storable JSONStorable) (io.Reader, error) {
 	return bytes.NewReader(resultingBytes), nil
 }
 
-// Unmarshal is a function that unmarshals the data from the reader into the specified value.
-func _unmarshal(r io.Reader, storable JSONStorable) error {
+// UnmarshalJSON is a function that unmarshals the data from the reader into the specified value.
+func UnmarshalJSON(r io.Reader, storable JSONStorable) error {
 	return json.NewDecoder(r).Decode(storable)
 }
 
-// Load loads the file at path into v.
+// LoadJSON loads the given JSONStorable.
 // Use os.IsNotExist() to see if the returned error is due to the file being missing.
 func LoadJSON(storable JSONStorable) error {
 
@@ -51,10 +52,10 @@ func LoadJSON(storable JSONStorable) error {
 	}
 	defer fileHandle.Close()
 
-	return _unmarshal(fileHandle, storable)
+	return UnmarshalJSON(fileHandle, storable)
 }
 
-// Save saves a representation of v to the file at path.
+// SaveJSON saves a representation of the given JSONStorable
 func SaveJSON(storable JSONStorable) error {
 	if err := os.MkdirAll(filepath.Dir(storable.Path()), 0770); err != nil {
 		return err
@@ -65,7 +66,7 @@ func SaveJSON(storable JSONStorable) error {
 	}
 	defer fileHandle.Close()
 
-	reader, err := _marshal(storable)
+	reader, err := MarshalJSON(storable)
 	if err != nil {
 		return err
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/diamondburned/arikawa/v3/state"
 )
 
+// CommandSeen processes a command to look up when a user was last seen.
 func CommandSeen(state *state.State, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) api.InteractionResponse {
 	if command.Options != nil && len(command.Options) > 0 {
 		option, err := command.Options[0].SnowflakeValue()
@@ -38,6 +39,7 @@ func CommandSeen(state *state.State, event *gateway.InteractionCreateEvent, comm
 	return ResponseMessage("No user given?!")
 }
 
+// CommandInactive processes a command to list who has not been active in a given timeframe.
 func CommandInactive(state *state.State, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) api.InteractionResponse {
 	days := int64(30)
 	if command.Options != nil && len(command.Options) > 0 {
