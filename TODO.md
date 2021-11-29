@@ -1,7 +1,7 @@
 
 # Commands
 | Done | Command  | Arguments       | Group   | Function                                                               |
-| ---- | -------- | --------------- | ------- | ---------------------------------------------------------------------- |
+| :--: | -------- | --------------- | ------- | ---------------------------------------------------------------------- |
 |      | grant    | string role     | admin   | Grant access to command group `string` to role `role`                  |
 |      | revoke   | string role     | admin   | Revoke access to command group `string` to role `role`                 |
 |      | access   |                 | admin   | List the access grants (and automagically purge invalid ones)          |
@@ -10,8 +10,8 @@
 |      | faqoff   | string          | faq     | Delete the key `string` from the FAQ                                   |
 |      | faqlist  |                 | faq     | LIst the FAQ topics                                                    |
 |      | vote     | float string    | vote    | Start a vote on the question `string` that will run for `float` hours. |
-|      | seen     | member          | seen    | Look up when `member` was last seen saying anything.                   |
-|      | inactive | int             | seen    | Look up who has not said anthing for `int` days.                       |
+|  X   | seen     | member          | seen    | Look up when `member` was last seen saying anything.                   |
+|  X   | inactive | int             | seen    | Look up who has not said anthing for `int` days.                       |
 
 # Storage
 | Done | Stores what   |
