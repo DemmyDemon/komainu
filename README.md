@@ -1,4 +1,4 @@
-Komainu is a Discord bot
+# Komainu is a Discord bot
 
 It's not very useful, perhaps, but it's a lot of fun to build. I'm learning Go and having fun, and from where I'm sitting that makes it a great hobby.
 
