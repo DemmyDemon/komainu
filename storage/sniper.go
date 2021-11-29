@@ -1,7 +1,9 @@
 package storage
 
 import (
+	"bytes"
 	"encoding/binary"
+	"encoding/gob"
 	"fmt"
 	"log"
 
@@ -67,8 +69,33 @@ func (sd *SniperData) Set(guild discord.GuildID, collection string, key interfac
 	case string:
 		return sd.sniper.Set(finalKey, []byte(finalValue), 0)
 	default:
-		return fmt.Errorf("unsupported value type %T", rawValue)
+		var inputBuffer bytes.Buffer
+		if err := gob.NewEncoder(&inputBuffer).Encode(rawValue); err != nil {
+			return err
+		}
+		return sd.sniper.Set(finalKey, inputBuffer.Bytes(), 0)
 	}
+}
+
+// GetObject attempts to decode whatever is stored under the given key into the target reference.
+// Best of luck.
+func (sd *SniperData) GetObject(guild discord.GuildID, collection string, key interface{}, target interface{}) (bool, error) {
+	exists, raw, err := sd.Get(guild, collection, key)
+	if err != nil {
+		return false, err
+	}
+	if !exists {
+		return false, nil
+	}
+
+	var outputBuffer bytes.Buffer
+	outputBuffer.Write(raw)
+	err = gob.NewDecoder(&outputBuffer).Decode(target)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 // GetString gets data from Sniper, assumes it's a string, and gives it to you.
@@ -98,4 +125,9 @@ func (sd *SniperData) GetUint64(guild discord.GuildID, collection string, key in
 		finalValue := binary.LittleEndian.Uint64(value)
 		return exist, finalValue, nil
 	}
+}
+
+func (sd *SniperData) Delete(guild discord.GuildID, collection string, key interface{}) (bool, error) {
+	finalKey := BuildFinalKey(guild, collection, key)
+	return sd.sniper.Delete(finalKey)
 }
