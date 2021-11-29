@@ -12,7 +12,7 @@ import (
 )
 
 // Connect connects to Discord
-func Connect(cfg *storage.Configuration) *state.State {
+func Connect(cfg *storage.Configuration, sniper storage.KeyValueStore) *state.State {
 	var token = os.Getenv("BOT_TOKEN")
 	if token == "" {
 		log.Fatalln("No BOT_TOKEN found in environment variables.")
@@ -26,14 +26,14 @@ func Connect(cfg *storage.Configuration) *state.State {
 	}
 
 	state.AddHandler(func(e *gateway.MessageCreateEvent) {
-		if err := storage.See(e.GuildID, e.Author.ID); err != nil {
+		if err := storage.See(sniper, e.GuildID, e.Author.ID); err != nil {
 			log.Printf("Seen in %d: %d sent a message in %s, BUT WAS NOT RECORDED:%s\n", e.GuildID, e.Author.ID, e.ChannelID, err)
 		} else {
 			log.Printf("Seen in %d: %d sent a message in %s\n", e.GuildID, e.Author.ID, e.ChannelID)
 		}
 	})
 
-	commands.AddCommandHandler(state)
+	commands.AddCommandHandler(state, sniper)
 
 	state.AddHandler(func(e *gateway.GuildCreateEvent) {
 		commands.RegisterCommands(state, e.ID)

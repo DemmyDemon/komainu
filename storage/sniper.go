@@ -15,31 +15,39 @@ type SniperData struct {
 	sniper *sniper.Store
 }
 
-var _singleton *SniperData
-
 // Sniper returns (or creates) the Sniper instance for storage needs.
-func Sniper() *SniperData {
-	if _singleton != nil {
-		return _singleton
-	}
-	if newSniper, err := sniper.Open(sniper.Dir("data/sniper")); err != nil {
-		log.Fatalln("Failed to open sniper data source:", err)
+func OpenSniper(path string) (*SniperData, error) {
+
+	if newSniper, err := sniper.Open(sniper.Dir(path)); err != nil {
+		return nil, err
 	} else {
-		_singleton = &SniperData{
+		return &SniperData{
 			sniper: newSniper,
-		}
+		}, nil
 	}
-	return _singleton
+}
+
+func (sd *SniperData) Open(path string) error {
+	if newSniper, err := sniper.Open(sniper.Dir(path)); err != nil {
+		return err
+	} else {
+		sd.sniper = newSniper
+	}
+	return nil
 }
 
 // BuildFinalKey naively concatinates together a bunch of stuff to make an appropriate key to store data under.
-func BuildFinalKey(guildID discord.GuildID, collection string, key interface{}) []byte {
+func (sd *SniperData) BuildFinalKey(guildID discord.GuildID, collection string, key interface{}) []byte {
 	return []byte(fmt.Sprintf("%s/%s/%v", guildID, collection, key))
+}
+
+func (sd *SniperData) Close() error {
+	return sd.sniper.Close()
 }
 
 // Get gets []byte data from Sniper.
 func (sd *SniperData) Get(guild discord.GuildID, collection string, key interface{}) (bool, []byte, error) {
-	finalKey := BuildFinalKey(guild, collection, key)
+	finalKey := sd.BuildFinalKey(guild, collection, key)
 	if val, err := sd.sniper.Get(finalKey); err != nil {
 		if err == sniper.ErrNotFound {
 			return false, nil, nil
@@ -53,7 +61,7 @@ func (sd *SniperData) Get(guild discord.GuildID, collection string, key interfac
 
 // Set smushes data into Sniper using a rubber mallet and lube.
 func (sd *SniperData) Set(guild discord.GuildID, collection string, key interface{}, rawValue interface{}) error {
-	finalKey := BuildFinalKey(guild, collection, key)
+	finalKey := sd.BuildFinalKey(guild, collection, key)
 	switch finalValue := rawValue.(type) {
 	case []byte:
 		return sd.sniper.Set(finalKey, finalValue, 0)
@@ -129,6 +137,6 @@ func (sd *SniperData) GetUint64(guild discord.GuildID, collection string, key in
 
 // Delete permanently removes the indicated guild/collection/key from Sniper
 func (sd *SniperData) Delete(guild discord.GuildID, collection string, key interface{}) (bool, error) {
-	finalKey := BuildFinalKey(guild, collection, key)
+	finalKey := sd.BuildFinalKey(guild, collection, key)
 	return sd.sniper.Delete(finalKey)
 }

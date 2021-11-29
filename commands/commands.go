@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"komainu/storage"
 	"log"
 	"strings"
 
@@ -13,6 +14,7 @@ import (
 
 type CommandFunction func(
 	state *state.State,
+	sniper storage.KeyValueStore,
 	event *gateway.InteractionCreateEvent,
 	command *discord.CommandInteraction,
 ) api.InteractionResponse
@@ -53,7 +55,7 @@ var commands = map[string]Command{
 }
 
 // HasAccess checks if the given user has access to the given command group in the given guild.
-func HasAccess(state *state.State, guildID discord.GuildID, channelID discord.ChannelID, member *discord.Member, group string) bool {
+func HasAccess(sniper storage.KeyValueStore, state *state.State, guildID discord.GuildID, channelID discord.ChannelID, member *discord.Member, group string) bool {
 	if member == nil {
 		return false
 	}
@@ -78,21 +80,21 @@ func HasAccess(state *state.State, guildID discord.GuildID, channelID discord.Ch
 }
 
 // AddCommandHandler, surprisingly, adds the command handler.
-func AddCommandHandler(state *state.State) {
+func AddCommandHandler(state *state.State, sniper storage.KeyValueStore) {
 	state.AddHandler(func(e *gateway.InteractionCreateEvent) {
 		command, ok := e.Data.(*discord.CommandInteraction)
 		if !ok {
 			return
 		}
 		if val, ok := commands[command.Name]; ok {
-			if !HasAccess(state, e.GuildID, e.ChannelID, e.Member, val.group) {
+			if !HasAccess(sniper, state, e.GuildID, e.ChannelID, e.Member, val.group) {
 				if err := state.RespondInteraction(e.ID, e.Token, ResponseMessage("Sorry, access was denied.")); err != nil {
 					log.Println("An error occured posting access denied response:", err)
 				}
 				return
 			}
 
-			response := val.code(state, e, command)
+			response := val.code(state, sniper, e, command)
 
 			if err := state.RespondInteraction(e.ID, e.Token, response); err != nil {
 				log.Println("Failed to send interaction resposne:", err)

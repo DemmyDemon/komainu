@@ -46,9 +46,16 @@ func main() {
 	} else {
 		log.Println("No logfile specified: Will just output to STDOUT and hope for the best.")
 	}
+
+	sniper, err := storage.OpenSniper("data/sniper")
+	if err != nil {
+		log.Fatalln("Could not open Sniper data store:", err)
+	}
+	defer sniper.Close()
+
 	log.Println("Preparing to connect to Discord")
 
-	state := bot.Connect(&cfg)
+	state := bot.Connect(&cfg, sniper)
 	defer state.Close()
 
 	WaitForInterrupt()
