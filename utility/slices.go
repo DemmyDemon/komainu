@@ -2,6 +2,7 @@ package utility
 
 import "github.com/diamondburned/arikawa/v3/discord"
 
+// RoleInCommon checks if one slice of RoleIDs has an element in common with the other.
 func RoleInCommon(one []discord.RoleID, other []discord.RoleID) bool {
 	for _, oneCandidate := range one {
 		for _, otherConeCandidate := range other {
@@ -13,6 +14,7 @@ func RoleInCommon(one []discord.RoleID, other []discord.RoleID) bool {
 	return false
 }
 
+// ContainsString checks if the haystack of strings has the needle string.
 func ContainsString(haystack []string, needle string) bool {
 	for _, candidate := range haystack {
 		if candidate == needle {
@@ -22,6 +24,7 @@ func ContainsString(haystack []string, needle string) bool {
 	return false
 }
 
+// ContainsRole checks if the haystack of RoleIDs has the needle RoleID
 func ContainsRole(haystack []discord.RoleID, needle discord.RoleID) bool {
 	for _, candidate := range haystack {
 		if candidate == needle {
