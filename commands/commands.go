@@ -2,7 +2,9 @@ package commands
 
 import (
 	"komainu/storage"
+	"komainu/utility"
 	"log"
+	"sort"
 	"strings"
 
 	"github.com/diamondburned/arikawa/v3/api"
@@ -127,14 +129,42 @@ var commands = map[string]Command{
 	// "vote": {"vote", "Initiate a vote", CommandVote, []discord.CommandOption{}},
 }
 
+// *Another* global, to avoid an initalization cycle :-/
+// Value is defined when AddCommandHandler is called, to avoid it being cyclc.
+var commandGroups []string
+
+// GetCommandGroups returns all the command groups.
+func GetCommandGroups() []string {
+	keys := make(map[string]bool)
+	groups := []string{}
+	for _, data := range commands {
+		if _, value := keys[data.group]; !value {
+			keys[data.group] = true
+			groups = append(groups, data.group)
+		}
+	}
+	sort.Strings(groups)
+	return groups
+}
+
 // HasAccess checks if the given user has access to the given command group in the given guild.
 func HasAccess(sniper storage.KeyValueStore, state *state.State, guildID discord.GuildID, channelID discord.ChannelID, member *discord.Member, group string) bool {
 	if member == nil {
 		return false
 	}
 
-	// TODO: Check member.RoleIDs against the roles stored under group string in Sniper
+	// First we check the KVS
+	granted := []discord.RoleID{}
+	found, err := sniper.GetObject(guildID, "access", group, &granted)
+	if err != nil {
+		log.Printf("[%s] HasAccess check failed to obtain access list from KVS: %s\n", guildID, err)
+	} else if found {
+		if utility.RoleInCommon(granted, member.RoleIDs) {
+			return true
+		}
+	}
 
+	// Then we check if this is The Owner Themself
 	if guild, err := state.Guild(guildID); err != nil {
 		log.Printf("Could not look up guild %s for access check: %s\n", guildID, err)
 		return false // Better safe than sorry!
@@ -142,6 +172,7 @@ func HasAccess(sniper storage.KeyValueStore, state *state.State, guildID discord
 		return true // Owner always has access to everything.
 	}
 
+	// Lastly, we check if they're an administrator
 	if permissions, err := state.Permissions(channelID, member.User.ID); err != nil {
 		log.Printf("Could not look up permissions for %s in channel %s for access check: %s\n", member.User.ID, channelID, err)
 		return false // Better safe than sorry!
@@ -154,6 +185,7 @@ func HasAccess(sniper storage.KeyValueStore, state *state.State, guildID discord
 
 // AddCommandHandler, surprisingly, adds the command handler.
 func AddCommandHandler(state *state.State, sniper storage.KeyValueStore) {
+	commandGroups = GetCommandGroups()
 	state.AddHandler(func(e *gateway.InteractionCreateEvent) {
 		command, ok := e.Data.(*discord.CommandInteraction)
 		if !ok {
