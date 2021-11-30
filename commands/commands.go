@@ -27,9 +27,45 @@ type Command struct {
 }
 
 var commands = map[string]Command{
-	// "grant":  {"admin", "Grant access to a command gruop to a role", CommandGrant, []discord.CommandOption{}},
-	// "revoke": {"admin", "Revoke access to a command group for a role", CommandRevoke, []discord.CommandOption{}},
-	// "access": {"admin", "See what roles have access to what command group", CommandAccess, []discord.CommandOption{}},
+	"access": {"access", "Grant, revoke and list command group access", CommandAccess, []discord.CommandOption{
+		&discord.SubcommandOption{
+			OptionName:  "grant",
+			Description: "Grant a role access to something",
+			Options: []discord.CommandOptionValue{
+				&discord.StringOption{
+					OptionName:  "group",
+					Description: "The command group to grant access to",
+					Required:    true,
+				},
+				&discord.RoleOption{
+					OptionName:  "role",
+					Description: "The role that gets this access",
+					Required:    true,
+				},
+			},
+		},
+		&discord.SubcommandOption{
+			OptionName:  "revoke",
+			Description: "Revoke access to something from a role",
+			Options: []discord.CommandOptionValue{
+				&discord.StringOption{
+					OptionName:  "group",
+					Description: "The command group to revoke access from",
+					Required:    true,
+				},
+				&discord.RoleOption{
+					OptionName:  "role",
+					Description: "The role that loses this access",
+					Required:    true,
+				},
+			},
+		},
+		&discord.SubcommandOption{
+			OptionName:  "list",
+			Description: "List what roles have access to what command groups",
+			Options:     []discord.CommandOptionValue{},
+		},
+	}},
 
 	"seen": {"seen", "Check when someone was last around", CommandSeen, []discord.CommandOption{
 		&discord.UserOption{
