@@ -94,14 +94,14 @@ func SubCommandFaqAdd(sniper storage.KeyValueStore, guildID discord.GuildID, opt
 // SubCommandFaqRemove processes a command to remove a FAQ item.
 func SubCommandFaqRemove(sniper storage.KeyValueStore, guildID discord.GuildID, options []discord.CommandInteractionOption) api.InteractionResponse {
 	if options == nil || len(options) != 1 {
-		log.Printf("[%s] /faqoff command structure is somehow nil or not one element. Wat.\n", guildID)
+		log.Printf("[%s] /faqset remove command structure is somehow nil or not one element. Wat.\n", guildID)
 		return ResponseMessage("Invalid command structure.")
 	}
 	topic := strings.ToLower(options[0].String())
 	//topic := command.Options[0].String()
 	exists, value, err := sniper.GetString(guildID, "faq", topic)
 	if err != nil {
-		log.Printf("[%s] /faqoff failed to GetString the topic %s: %s", guildID, topic, err)
+		log.Printf("[%s] /faqset remove failed to GetString the topic %s: %s", guildID, topic, err)
 		return ResponseMessage("An error occured, and has been logged.")
 	}
 	if !exists {
@@ -109,7 +109,7 @@ func SubCommandFaqRemove(sniper storage.KeyValueStore, guildID discord.GuildID, 
 	}
 	removed, err := sniper.Delete(guildID, "faq", topic)
 	if err != nil {
-		log.Printf("[%s] /faqoff failed to Delete the topic %s: %s", guildID, topic, err)
+		log.Printf("[%s] /faqset remove failed to Delete the topic %s: %s", guildID, topic, err)
 		return ResponseMessage("An error occured, and has been logged.")
 	}
 	if !removed {
@@ -120,7 +120,7 @@ func SubCommandFaqRemove(sniper storage.KeyValueStore, guildID discord.GuildID, 
 	faqList := []string{}
 	_, err = sniper.GetObject(guildID, "faq", "LIST", &faqList)
 	if err != nil {
-		log.Printf("[%s] /faqoff storage is fine, but failed to get the LIST: %s", guildID, err)
+		log.Printf("[%s] /faqset remove storage is fine, but failed to get the LIST: %s", guildID, err)
 	}
 	for idx, item := range faqList {
 		if item == topic {
@@ -131,7 +131,7 @@ func SubCommandFaqRemove(sniper storage.KeyValueStore, guildID discord.GuildID, 
 	}
 	err = sniper.Set(guildID, "faq", "LIST", faqList)
 	if err != nil {
-		log.Printf("[%s] /faqoff storage is fine, but failed to save the LIST: %s", guildID, err)
+		log.Printf("[%s] /faqset remove storage is fine, but failed to save the LIST: %s", guildID, err)
 		return ResponseMessage(fmt.Sprintf("Kinda forgot %s: %s", topic, value))
 	}
 
@@ -143,7 +143,7 @@ func SubCommandFaqList(sniper storage.KeyValueStore, guildID discord.GuildID) ap
 	faqList := []string{}
 	exists, err := sniper.GetObject(guildID, "faq", "LIST", &faqList)
 	if err != nil {
-		log.Printf("[%s] /faqlist failed to get the LIST: %s", guildID, err)
+		log.Printf("[%s] /faqset list failed to get the LIST: %s", guildID, err)
 		return ResponseMessage("An error occured, and has been logged.")
 	}
 	if exists && len(faqList) > 0 {
