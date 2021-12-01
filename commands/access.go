@@ -31,7 +31,7 @@ func CommandAccess(state *state.State, sniper storage.KeyValueStore, event *gate
 	}
 }
 
-// SubCommandAccessGrant processes a command to grant access.
+// SubCommandAccessGrant processes a sub command to grant access.
 func SubCommandAccessGrant(sniper storage.KeyValueStore, guildID discord.GuildID, options []discord.CommandInteractionOption) api.InteractionResponse {
 	if options == nil || len(options) != 2 {
 		log.Printf("[%s] /access grant command structure is somehow nil or not two elements. Wat.\n", guildID)
@@ -67,7 +67,7 @@ func SubCommandAccessGrant(sniper storage.KeyValueStore, guildID discord.GuildID
 	return ResponseMessageNoMention(fmt.Sprintf("<@&%s> now has access to the `%s` command group\n", roleID, commandGroup))
 }
 
-// SubCommandAccessRevoke processes a command to revoke access.
+// SubCommandAccessRevoke processes a sub command to revoke access.
 func SubCommandAccessRevoke(sniper storage.KeyValueStore, guildID discord.GuildID, options []discord.CommandInteractionOption) api.InteractionResponse {
 	if options == nil || len(options) != 2 {
 		log.Printf("[%s] /access revoke command structure is somehow nil or not two elements. Wat.\n", guildID)
@@ -111,7 +111,7 @@ func SubCommandAccessRevoke(sniper storage.KeyValueStore, guildID discord.GuildI
 	return ResponseMessageNoMention(fmt.Sprintf("<@&%s> is denied access to the `%s` command group\n", roleID, commandGroup))
 }
 
-// CommandRevoke processes a command to revoke access.
+// SubCommandAccessList processes a sub command to list who has access to what.
 func SubCommandAccessList(sniper storage.KeyValueStore, guildID discord.GuildID) api.InteractionResponse {
 	var sb strings.Builder
 	fmt.Fprintln(&sb, "Current access is:")
