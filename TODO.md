@@ -2,9 +2,9 @@
 # Commands
 | Done | Command       | Arguments       | Group    | Function                                                               |
 | :--: | ------------- | --------------- | -------- | ---------------------------------------------------------------------- |
-|      | access grant  | string role     | access   | Grant access to command group `string` to role `role`                  |
-|      | access revoke | string role     | access   | Revoke access to command group `string` to role `role`                 |
-|      | access list   |                 | access   | List the access grants (and automagically purge invalid ones)          |
+|  X   | access grant  | string role     | access   | Grant access to command group `string` to role `role`                  |
+|  X   | access revoke | string role     | access   | Revoke access to command group `string` to role `role`                 |
+|  X   | access list   |                 | access   | List the access grants (and automagically purge invalid ones)          |
 |  X   | faq           | string          | faquser  | Look up the value for key `string` in the FAQ                          |
 |  X   | faqset add    | string1 string2 | faqadmin | Add or replace value `string2` for the key `string1` in the FAQ        |
 |  X   | faqset remove | string          | faqadmin | Delete the key `string` from the FAQ                                   |
@@ -17,7 +17,7 @@
 | Done | Stores what   |
 | :--: | ------------- |
 |  X   | Configuration |
-|      | Access rights |
+|  X   | Access rights |
 |  X   | FAQ items     |
 |      | Votes         |
 |  X   | Seen times    |
