@@ -18,8 +18,6 @@ func Connect(cfg *storage.Configuration, sniper storage.KeyValueStore) *state.St
 		log.Fatalln("No BOT_TOKEN found in environment variables.")
 	}
 
-	// seen := storage.GetSeen()
-
 	state, err := state.New("Bot " + token)
 	if err != nil {
 		log.Fatalln("Failed to create Discord state:", err)
