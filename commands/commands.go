@@ -126,7 +126,30 @@ var commands = map[string]Command{
 		},
 	}},
 
-	// "vote": {"vote", "Initiate a vote", CommandVote, []discord.CommandOption{}},
+	"vote": {"vote", "Initiate a vote", CommandVote, []discord.CommandOption{
+		&discord.NumberOption{
+			OptionName:  "length",
+			Description: "The number of days the vote should run.",
+			Required:    true,
+			Min:         option.NewFloat(0),
+			Max:         option.NewFloat(14),
+		},
+		&discord.StringOption{
+			OptionName:  "question",
+			Description: "The question being asked. Works best as a yes/no question.",
+			Required:    true,
+		},
+		&discord.StringOption{
+			OptionName:  "positive",
+			Description: "The 👍 option description",
+			Required:    true,
+		},
+		&discord.StringOption{
+			OptionName:  "negative",
+			Description: "The 👎 option description",
+			Required:    true,
+		},
+	}},
 }
 
 // *Another* global, to avoid an initalization cycle :-/

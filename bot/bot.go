@@ -18,10 +18,12 @@ func Connect(cfg *storage.Configuration, sniper storage.KeyValueStore) *state.St
 		log.Fatalln("No BOT_TOKEN found in environment variables.")
 	}
 
-	state, err := state.New("Bot " + token)
-	if err != nil {
-		log.Fatalln("Failed to create Discord state:", err)
-	}
+	state := state.New("Bot " + token)
+	/*
+		if err != nil {
+			log.Fatalln("Failed to create Discord state:", err)
+		}
+	*/
 
 	state.AddHandler(func(e *gateway.MessageCreateEvent) {
 		if err := storage.See(sniper, e.GuildID, e.Author.ID); err != nil {
@@ -29,6 +31,10 @@ func Connect(cfg *storage.Configuration, sniper storage.KeyValueStore) *state.St
 		} else {
 			log.Printf("Seen in %d: %d sent a message in %s\n", e.GuildID, e.Author.ID, e.ChannelID)
 		}
+	})
+
+	state.AddHandler(func(e *gateway.MessageReactionAddEvent) {
+		log.Printf("Reaction in %d: %d reacted to message %s in %s with %s", e.GuildID, e.UserID, e.MessageID, e.ChannelID, e.Emoji)
 	})
 
 	commands.AddCommandHandler(state, sniper)
