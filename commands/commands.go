@@ -129,10 +129,10 @@ var commands = map[string]Command{
 	"vote": {"vote", "Initiate a vote", CommandVote, []discord.CommandOption{
 		&discord.NumberOption{
 			OptionName:  "length",
-			Description: "The number of days the vote should run.",
+			Description: "The number of hours the vote should run.",
 			Required:    true,
 			Min:         option.NewFloat(0),
-			Max:         option.NewFloat(14),
+			Max:         option.NewFloat(336), // 336 hours is two weeks.
 		},
 		&discord.StringOption{
 			OptionName:  "question",
