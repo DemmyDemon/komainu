@@ -19,13 +19,12 @@ func Connect(cfg *storage.Configuration, sniper storage.KeyValueStore) *state.St
 	}
 
 	state := state.New("Bot " + token)
-	/*
-		if err != nil {
-			log.Fatalln("Failed to create Discord state:", err)
-		}
-	*/
 
 	state.AddHandler(func(e *gateway.MessageCreateEvent) {
+		if e.GuildID == 0 {
+			return // It's either a private message, or an ephemeral-response command. Doesn't count.
+		}
+
 		if err := storage.See(sniper, e.GuildID, e.Author.ID); err != nil {
 			log.Printf("Seen in %d: %d sent a message in %s, BUT WAS NOT RECORDED:%s\n", e.GuildID, e.Author.ID, e.ChannelID, err)
 		} else {

@@ -35,18 +35,18 @@ func CommandAccess(state *state.State, sniper storage.KeyValueStore, event *gate
 func SubCommandAccessGrant(sniper storage.KeyValueStore, guildID discord.GuildID, options []discord.CommandInteractionOption) api.InteractionResponse {
 	if options == nil || len(options) != 2 {
 		log.Printf("[%s] /access grant command structure is somehow nil or not two elements. Wat.\n", guildID)
-		return ResponseMessage("Invalid command structure.")
+		return ResponseEphemeral("Invalid command structure.")
 	}
 
 	commandGroup := strings.ToLower(options[0].String())
 	if !utility.ContainsString(commandGroups, commandGroup) {
-		return ResponseMessage(fmt.Sprintf("Sorry, `%s` is not a valid command group.", commandGroup))
+		return ResponseEphemeral(fmt.Sprintf("Sorry, `%s` is not a valid command group.", commandGroup))
 	}
 
 	value, err := options[1].SnowflakeValue()
 	if err != nil {
 		log.Printf("[%s] /access grant failed to obtain snowflake from first argument (%v): %s\n", guildID, options[1], err)
-		return ResponseMessage("An error occured, and has been logged.")
+		return ResponseEphemeral("An error occured, and has been logged.")
 	}
 	roleID := discord.RoleID(value)
 
@@ -54,14 +54,14 @@ func SubCommandAccessGrant(sniper storage.KeyValueStore, guildID discord.GuildID
 	found, err := sniper.GetObject(guildID, "access", commandGroup, &granted)
 	if err != nil {
 		log.Printf("[%s] /access grant failed to obtain access list from KVS: %s\n", guildID, err)
-		return ResponseMessage("An error occured, and has been logged.")
+		return ResponseEphemeral("An error occured, and has been logged.")
 	}
 	if !found || !utility.ContainsRole(granted, roleID) {
 		granted = append(granted, roleID)
 		err := sniper.Set(guildID, "access", commandGroup, granted)
 		if err != nil {
 			log.Printf("[%s] /access grant failed to store updated access list in KVS: %s\n", guildID, err)
-			return ResponseMessage("An error occured, and has been logged.")
+			return ResponseEphemeral("An error occured, and has been logged.")
 		}
 	}
 	return ResponseMessageNoMention(fmt.Sprintf("<@&%s> now has access to the `%s` command group\n", roleID, commandGroup))
@@ -71,18 +71,18 @@ func SubCommandAccessGrant(sniper storage.KeyValueStore, guildID discord.GuildID
 func SubCommandAccessRevoke(sniper storage.KeyValueStore, guildID discord.GuildID, options []discord.CommandInteractionOption) api.InteractionResponse {
 	if options == nil || len(options) != 2 {
 		log.Printf("[%s] /access revoke command structure is somehow nil or not two elements. Wat.\n", guildID)
-		return ResponseMessage("Invalid command structure.")
+		return ResponseEphemeral("Invalid command structure.")
 	}
 
 	commandGroup := strings.ToLower(options[0].String())
 	if !utility.ContainsString(commandGroups, commandGroup) {
-		return ResponseMessage(fmt.Sprintf("Sorry, `%s` is not a valid command group.", commandGroup))
+		return ResponseEphemeral(fmt.Sprintf("Sorry, `%s` is not a valid command group.", commandGroup))
 	}
 
 	value, err := options[1].SnowflakeValue()
 	if err != nil {
 		log.Printf("[%s] /access revoke failed to obtain snowflake from first argument (%v): %s\n", guildID, options[1], err)
-		return ResponseMessage("An error occured, and has been logged.")
+		return ResponseEphemeral("An error occured, and has been logged.")
 	}
 	roleID := discord.RoleID(value)
 
@@ -90,7 +90,7 @@ func SubCommandAccessRevoke(sniper storage.KeyValueStore, guildID discord.GuildI
 	found, err := sniper.GetObject(guildID, "access", commandGroup, &granted)
 	if err != nil {
 		log.Printf("[%s] /access revoke failed to obtain access list from KVS: %s\n", guildID, err)
-		return ResponseMessage("An error occured, and has been logged.")
+		return ResponseEphemeral("An error occured, and has been logged.")
 	}
 	if found && utility.ContainsRole(granted, roleID) {
 
@@ -105,7 +105,7 @@ func SubCommandAccessRevoke(sniper storage.KeyValueStore, guildID discord.GuildI
 		err := sniper.Set(guildID, "access", commandGroup, granted)
 		if err != nil {
 			log.Printf("[%s] /access revoke failed to store updated access list in KVS: %s\n", guildID, err)
-			return ResponseMessage("An error occured, and has been logged.")
+			return ResponseEphemeral("An error occured, and has been logged.")
 		}
 	}
 	return ResponseMessageNoMention(fmt.Sprintf("<@&%s> is denied access to the `%s` command group\n", roleID, commandGroup))
@@ -120,7 +120,7 @@ func SubCommandAccessList(sniper storage.KeyValueStore, guildID discord.GuildID)
 		found, err := sniper.GetObject(guildID, "access", group, &granted)
 		if err != nil {
 			log.Printf("[%s] /access list failed to obtain access list from KVS: %s\n", guildID, err)
-			return ResponseMessage("An error occured, and has been logged.")
+			return ResponseEphemeral("An error occured, and has been logged.")
 		}
 		fmt.Fprintf(&sb, "`%s`:", group)
 		if !found || len(granted) == 0 {

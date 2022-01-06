@@ -156,9 +156,9 @@ var commands = map[string]Command{
 // Value is defined when AddCommandHandler is called, to avoid it being cyclc.
 var commandGroups []string
 
-// The Token Bins. 5 is an arbituary number, and it decrements at 10 second intervals.
+// The Token Bins. 5 and 10 are arbituary numbers, and it decrements at 10 second intervals.
 var userTokenBin = &utility.TokenBin{Max: 5, Interval: 10}
-var channelTokenBin = &utility.TokenBin{Max: 5, Interval: 10}
+var channelTokenBin = &utility.TokenBin{Max: 10, Interval: 10}
 
 // GetCommandGroups returns all the command groups.
 func GetCommandGroups() []string {
@@ -220,15 +220,21 @@ func AddCommandHandler(state *state.State, sniper storage.KeyValueStore) {
 		}
 
 		if !userTokenBin.Allocate(discord.Snowflake(e.GuildID), discord.Snowflake(e.Member.User.ID)) {
-			return // FIXME: We need to do better than just ignoring it!
+			if err := state.RespondInteraction(e.ID, e.Token, ResponseEphemeral("You are using too many commands too quickly. Calm down.")); err != nil {
+				log.Println("An error occured posting throttle warning emphemral response (user):", err)
+			}
+			return
 		}
 		if !channelTokenBin.Allocate(discord.Snowflake(e.GuildID), discord.Snowflake(e.ChannelID)) {
-			return // FIXME: Again, we need to do better than this!
+			if err := state.RespondInteraction(e.ID, e.Token, ResponseEphemeral("Too many commands being processed in this channel right now. Please wait.")); err != nil {
+				log.Println("An error occured posting throttle warning emphemral response (channel):", err)
+			}
+			return
 		}
 
 		if val, ok := commands[command.Name]; ok {
 			if !HasAccess(sniper, state, e.GuildID, e.ChannelID, e.Member, val.group) {
-				if err := state.RespondInteraction(e.ID, e.Token, ResponseMessage("Sorry, access was denied.")); err != nil {
+				if err := state.RespondInteraction(e.ID, e.Token, ResponseEphemeral("Sorry, access was denied.")); err != nil {
 					log.Println("An error occured posting access denied response:", err)
 				}
 				return
@@ -277,6 +283,17 @@ func RegisterCommands(state *state.State, guildID discord.GuildID) {
 		} else {
 			log.Printf("[%s] Registered command /%s", guildID, name)
 		}
+	}
+}
+
+// ResponseEphemeral generates an emphemeral response message from the strings given.
+func ResponseEphemeral(message ...string) api.InteractionResponse {
+	return api.InteractionResponse{
+		Type: api.MessageInteractionWithSource,
+		Data: &api.InteractionResponseData{
+			Content: option.NewNullableString(strings.Join(message, " ")),
+			Flags:   api.EphemeralResponse,
+		},
 	}
 }
 

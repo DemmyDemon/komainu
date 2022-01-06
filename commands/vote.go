@@ -14,7 +14,7 @@ import (
 func CommandVote(state *state.State, sniper storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) api.InteractionResponse {
 	if command.Options == nil || len(command.Options) != 4 {
 		log.Printf("[%s] /vote command structure is somehow nil or not the correct number of elements. Wat.\n", event.GuildID)
-		return ResponseMessage("Yeah, no, that didn't work.")
+		return ResponseEphemeral("Yeah, no, that didn't work.")
 	}
-	return ResponseMessage("Sorry, this is still being worked on!")
+	return ResponseEphemeral("Sorry, this is still being worked on!")
 }

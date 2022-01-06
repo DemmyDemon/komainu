@@ -19,26 +19,26 @@ func CommandSeen(state *state.State, sniper storage.KeyValueStore, event *gatewa
 		option, err := command.Options[0].SnowflakeValue()
 		if err != nil {
 			log.Printf("[%s] Failed to get snowflake value for /seen: %s\n", event.GuildID, err)
-			return ResponseMessage("An error occured, and has been logged.")
+			return ResponseEphemeral("An error occured, and has been logged.")
 		}
 		if me, err := state.Me(); err != nil {
 			log.Printf("[%s] Failed to look up myself to see if I match /seen: %s\n", event.GuildID, err)
-			return ResponseMessage("An error occured, and has been logged.")
+			return ResponseEphemeral("An error occured, and has been logged.")
 		} else if me.ID == discord.UserID(option) {
-			return ResponseMessage("I'm right here, buddy!")
+			return ResponseEphemeral("I'm right here, buddy!")
 		}
 
 		found, timestamp, err := storage.LastSeen(sniper, event.GuildID, discord.UserID(option))
 		if err != nil {
 			log.Printf("[%s] Failed to get %s from Sniper for /seen lookup: %s\n", event.GuildID, option, err)
-			return ResponseMessage("An error occured, and has been logged.")
+			return ResponseEphemeral("An error occured, and has been logged.")
 		}
 		if !found {
 			return ResponseMessageNoMention(fmt.Sprintf("Sorry, I've never seen <@%s> say anything at all!", option))
 		}
 		return ResponseMessageNoMention(fmt.Sprintf("I last saw <@%s> <t:%d:R>", option, timestamp))
 	}
-	return ResponseMessage("No user given?!")
+	return ResponseEphemeral("No user given?!")
 }
 
 // CommandInactive processes a command to list who has not been active in a given timeframe.
@@ -48,10 +48,10 @@ func CommandInactive(state *state.State, sniper storage.KeyValueStore, event *ga
 		d, err := command.Options[0].IntValue()
 		if err != nil {
 			log.Printf("[%s] Failed to get int value for /inactive: %s", event.GuildID, err)
-			return ResponseMessage("An error occured, and has been logged.")
+			return ResponseEphemeral("An error occured, and has been logged.")
 		}
 		if d <= 0 {
-			return ResponseMessage(fmt.Sprintf("Everyone. Everyone has been inactive for %d days.", d))
+			return ResponseEphemeral(fmt.Sprintf("Everyone. Everyone has been inactive for %d days.", d))
 		}
 		days = d
 	}
@@ -59,7 +59,7 @@ func CommandInactive(state *state.State, sniper storage.KeyValueStore, event *ga
 	members, err := state.Session.Members(event.GuildID, 0)
 	if err != nil {
 		log.Printf("[%s] Failed to get member list for /inactive lookup: %s", event.GuildID, err)
-		return ResponseMessage("An error occured, and has been logged.")
+		return ResponseEphemeral("An error occured, and has been logged.")
 	}
 
 	never := []discord.UserID{}
@@ -71,7 +71,7 @@ func CommandInactive(state *state.State, sniper storage.KeyValueStore, event *ga
 		seen, when, err := storage.LastSeen(sniper, event.GuildID, member.User.ID)
 		if err != nil {
 			log.Printf("[%s] Failed to get a storage.LastSeen for %s: %s", event.GuildID, member.User.ID, err)
-			return ResponseMessage("An error occured, and has been logged.")
+			return ResponseEphemeral("An error occured, and has been logged.")
 		} else if !seen {
 			never = append(never, member.User.ID)
 		} else if when <= atLeast {
