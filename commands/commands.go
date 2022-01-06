@@ -156,6 +156,10 @@ var commands = map[string]Command{
 // Value is defined when AddCommandHandler is called, to avoid it being cyclc.
 var commandGroups []string
 
+// The Token Bins. 5 is an arbituary number, and it decrements at 10 second intervals.
+var userTokenBin = &utility.TokenBin{Max: 5, Interval: 10}
+var channelTokenBin = &utility.TokenBin{Max: 5, Interval: 10}
+
 // GetCommandGroups returns all the command groups.
 func GetCommandGroups() []string {
 	keys := make(map[string]bool)
@@ -215,7 +219,12 @@ func AddCommandHandler(state *state.State, sniper storage.KeyValueStore) {
 			return
 		}
 
-		// TODO: Throttle to avoid spamming commands?
+		if !userTokenBin.Allocate(discord.Snowflake(e.GuildID), discord.Snowflake(e.Member.User.ID)) {
+			return // FIXME: We need to do better than just ignoring it!
+		}
+		if !channelTokenBin.Allocate(discord.Snowflake(e.GuildID), discord.Snowflake(e.ChannelID)) {
+			return // FIXME: Again, we need to do better than this!
+		}
 
 		if val, ok := commands[command.Name]; ok {
 			if !HasAccess(sniper, state, e.GuildID, e.ChannelID, e.Member, val.group) {
