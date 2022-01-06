@@ -21,7 +21,19 @@
 |  X   | FAQ items     |
 |      | Votes         |
 |  X   | Seen times    |
+|      | Throttling    |
 
 # Voting
-
 I can use the emoji 👎 and 👍 for positive and negative votes.
+
+# Throttling
+To avoid mass spamming of things like `/faq`, there might be need of a throttling function.
+
+Options:
+- Per-user ignore commands after processing one.
+- Globally ignore commands after processing one.
+- Per-user uses-per-minute.
+- Global uses-per-minute.
+- Different settings for different commands.
+
+The downside to throttling is that if it is in use for a help system, it will limit how often helpers can actually help. Perhaps some sort of excemption system needs to exist?

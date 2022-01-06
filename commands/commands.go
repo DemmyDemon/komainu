@@ -214,6 +214,9 @@ func AddCommandHandler(state *state.State, sniper storage.KeyValueStore) {
 		if !ok {
 			return
 		}
+
+		// TODO: Throttle to avoid spamming commands?
+
 		if val, ok := commands[command.Name]; ok {
 			if !HasAccess(sniper, state, e.GuildID, e.ChannelID, e.Member, val.group) {
 				if err := state.RespondInteraction(e.ID, e.Token, ResponseMessage("Sorry, access was denied.")); err != nil {
