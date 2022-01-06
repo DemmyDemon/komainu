@@ -21,19 +21,18 @@ func (token *Token) Increment() {
 			interval = token.Interval
 		}
 		token.ticker = time.NewTicker(time.Duration(interval) * time.Second)
-		go func() {
-			for { // ever
-				<-token.ticker.C // Just wait for it to tick, we don't care what it returns.
-				if token.count > 0 {
-					token.count--
-				} else {
-					token.ticker.Stop()
-					token.ticker = nil
-					break
-				}
-			}
-		}()
+		go tick(token)
 	}
+}
+
+// tick does the ticker waiting, decrementing and cleanup.
+func tick(token *Token) {
+	for token.count > 0 {
+		<-token.ticker.C // Just wait for it to tick, we don't care what it returns.
+		token.count--
+	}
+	token.ticker.Stop()
+	token.ticker = nil
 }
 
 // GetCount returns the current count on the token.
