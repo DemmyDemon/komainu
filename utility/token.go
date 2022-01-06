@@ -1,7 +1,6 @@
 package utility
 
 import (
-	"log"
 	"time"
 
 	"github.com/diamondburned/arikawa/v3/discord"
@@ -26,7 +25,6 @@ func (token *Token) Increment() {
 			for { // ever
 				<-token.ticker.C // Just wait for it to tick, we don't care what it returns.
 				if token.count > 0 {
-					log.Printf("Count now %d\n", token.count)
 					token.count--
 				} else {
 					token.ticker.Stop()
