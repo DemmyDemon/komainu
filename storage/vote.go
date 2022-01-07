@@ -74,7 +74,6 @@ func GetVote(kvs KeyValueStore, guildID discord.GuildID, messageID discord.Messa
 
 func GetVoteCollection(kvs KeyValueStore, guildID discord.GuildID) (VoteCollection, error) {
 
-	// TODO: Profile how expensive the make() here actually is. Do I need to only do it when actually needed?
 	collection := VoteCollection{
 		GuildID: guildID,
 		Votes:   make(map[discord.MessageID]Vote),
