@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"komainu/storage"
 	"komainu/utility"
 	"log"
@@ -19,7 +20,12 @@ type CommandFunction func(
 	sniper storage.KeyValueStore,
 	event *gateway.InteractionCreateEvent,
 	command *discord.CommandInteraction,
-) api.InteractionResponse
+) CommandResponse
+
+type CommandResponse struct {
+	InteractionResponse api.InteractionResponse
+	Callback            func(discord.MessageID)
+}
 
 type Command struct {
 	group       string
@@ -140,14 +146,24 @@ var commands = map[string]Command{
 			Required:    true,
 		},
 		&discord.StringOption{
-			OptionName:  "positive",
-			Description: "The 👍 option description",
+			OptionName:  "first",
+			Description: "The first vote option description",
 			Required:    true,
 		},
 		&discord.StringOption{
-			OptionName:  "negative",
-			Description: "The 👎 option description",
+			OptionName:  "second",
+			Description: "The second vote option description",
 			Required:    true,
+		},
+		&discord.StringOption{
+			OptionName:  "third",
+			Description: "The third vote option description",
+			Required:    false,
+		},
+		&discord.StringOption{
+			OptionName:  "fourth",
+			Description: "The fourth vote option description",
+			Required:    false,
 		},
 	}},
 }
@@ -214,37 +230,59 @@ func HasAccess(sniper storage.KeyValueStore, state *state.State, guildID discord
 func AddCommandHandler(state *state.State, sniper storage.KeyValueStore) {
 	commandGroups = GetCommandGroups()
 	state.AddHandler(func(e *gateway.InteractionCreateEvent) {
-		command, ok := e.Data.(*discord.CommandInteraction)
-		if !ok {
-			return
-		}
 
-		if !userTokenBin.Allocate(discord.Snowflake(e.GuildID), discord.Snowflake(e.Member.User.ID)) {
-			if err := state.RespondInteraction(e.ID, e.Token, ResponseEphemeral("You are using too many commands too quickly. Calm down.")); err != nil {
-				log.Println("An error occured posting throttle warning emphemral response (user):", err)
-			}
-			return
-		}
-		if !channelTokenBin.Allocate(discord.Snowflake(e.GuildID), discord.Snowflake(e.ChannelID)) {
-			if err := state.RespondInteraction(e.ID, e.Token, ResponseEphemeral("Too many commands being processed in this channel right now. Please wait.")); err != nil {
-				log.Println("An error occured posting throttle warning emphemral response (channel):", err)
-			}
-			return
-		}
+		switch command := e.Data.(type) {
+		case *discord.CommandInteraction:
 
-		if val, ok := commands[command.Name]; ok {
-			if !HasAccess(sniper, state, e.GuildID, e.ChannelID, e.Member, val.group) {
-				if err := state.RespondInteraction(e.ID, e.Token, ResponseEphemeral("Sorry, access was denied.")); err != nil {
-					log.Println("An error occured posting access denied response:", err)
+			if !userTokenBin.Allocate(discord.Snowflake(e.GuildID), discord.Snowflake(e.Member.User.ID)) {
+				if err := state.RespondInteraction(e.ID, e.Token, ResponseEphemeral("You are using too many commands too quickly. Calm down.")); err != nil {
+					log.Println("An error occured posting throttle warning emphemral response (user):", err)
+				}
+				return
+			}
+			if !channelTokenBin.Allocate(discord.Snowflake(e.GuildID), discord.Snowflake(e.ChannelID)) {
+				if err := state.RespondInteraction(e.ID, e.Token, ResponseEphemeral("Too many commands being processed in this channel right now. Please wait.")); err != nil {
+					log.Println("An error occured posting throttle warning emphemral response (channel):", err)
 				}
 				return
 			}
 
-			response := val.code(state, sniper, e, command)
+			if val, ok := commands[command.Name]; ok {
+				if !HasAccess(sniper, state, e.GuildID, e.ChannelID, e.Member, val.group) {
+					if err := state.RespondInteraction(e.ID, e.Token, ResponseEphemeral("Sorry, access was denied.")); err != nil {
+						log.Println("An error occured posting access denied response:", err)
+					}
+					return
+				}
 
-			if err := state.RespondInteraction(e.ID, e.Token, response); err != nil {
-				log.Println("Failed to send interaction resposne:", err)
+				response := val.code(state, sniper, e, command)
+
+				if err := state.RespondInteraction(e.ID, e.Token, response.InteractionResponse); err != nil {
+					log.Println("Failed to send interaction response:", err)
+				}
+				if response.Callback != nil {
+					message, err := state.InteractionResponse(e.AppID, e.Token)
+					if err != nil {
+						log.Printf("Error %s getting message reference for %s command callback", err, command.Name)
+						return
+					}
+					if message != nil && message.ID != discord.NullMessageID {
+						response.Callback(message.ID)
+					}
+				}
 			}
+		case discord.ComponentInteraction:
+			// TODO: Check if this is a vote first, and if it is, toss it over to commands/vote.go for processing.
+			// It might be that I have other, different ComponentInteractiong thingbobs in the future.
+			if _, err := state.EditMessage(e.ChannelID, e.Message.ID, fmt.Sprintf("Response was: %s\n", command.ID())); err != nil {
+				log.Println("Failed to edit message based on button click:", err)
+			}
+			if err := state.RespondInteraction(e.ID, e.Token, ResponseEphemeral("You voted "+string(command.ID()))); err != nil {
+				log.Println("Failed to send component interaction ephemeral response:", err)
+			}
+		default:
+			log.Printf("Unhandled interaction type %T", e.Data)
+			return
 		}
 	})
 }

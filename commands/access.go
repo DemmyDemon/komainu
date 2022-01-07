@@ -14,20 +14,20 @@ import (
 )
 
 // CommandAccess processes a command to list access entries.
-func CommandAccess(state *state.State, sniper storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) api.InteractionResponse {
+func CommandAccess(state *state.State, sniper storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
 	if command.Options == nil || len(command.Options) != 1 {
 		log.Printf("[%s] /access command structure is somehow nil or not a single element. Wat.\n", event.GuildID)
-		return ResponseMessage("I'm sorry, what? Something very weird happened.")
+		return CommandResponse{ResponseMessage("I'm sorry, what? Something very weird happened."), nil}
 	}
 	switch command.Options[0].Name {
 	case "grant":
-		return SubCommandAccessGrant(sniper, event.GuildID, command.Options[0].Options)
+		return CommandResponse{SubCommandAccessGrant(sniper, event.GuildID, command.Options[0].Options), nil}
 	case "revoke":
-		return SubCommandAccessRevoke(sniper, event.GuildID, command.Options[0].Options)
+		return CommandResponse{SubCommandAccessRevoke(sniper, event.GuildID, command.Options[0].Options), nil}
 	case "list":
-		return SubCommandAccessList(sniper, event.GuildID)
+		return CommandResponse{SubCommandAccessList(sniper, event.GuildID), nil}
 	default:
-		return ResponseMessage("Unknown subcommand! Clearly *someone* dropped the ball!")
+		return CommandResponse{ResponseMessage("Unknown subcommand! Clearly *someone* dropped the ball!"), nil}
 	}
 }
 

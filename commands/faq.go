@@ -15,38 +15,38 @@ import (
 )
 
 // CommandFaq processes a command to retrieve a FAQ item.
-func CommandFaq(state *state.State, sniper storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) api.InteractionResponse {
+func CommandFaq(state *state.State, sniper storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
 	if command.Options == nil || len(command.Options) != 1 {
 		log.Printf("[%s] /faq command structure is somehow nil or not a single element. Wat.\n", event.GuildID)
-		return ResponseEphemeral("Invalid command structure.")
+		return CommandResponse{ResponseEphemeral("Invalid command structure."), nil}
 	}
 	topic := strings.ToLower(command.Options[0].String())
 	exists, value, err := sniper.GetString(event.GuildID, "faq", topic)
 	if err != nil {
 		log.Printf("[%s] /faq failed to GetString the topic %s: %s", event.GuildID, topic, err)
-		return ResponseEphemeral("An error occured, and has been logged.")
+		return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
 	}
 	if !exists {
-		return ResponseEphemeral(fmt.Sprintf("Sorry, I've never heard of %s", topic))
+		return CommandResponse{ResponseEphemeral(fmt.Sprintf("Sorry, I've never heard of %s", topic)), nil}
 	}
-	return ResponseMessageNoMention(value)
+	return CommandResponse{ResponseMessageNoMention(value), nil}
 }
 
 // CommandFaqSet processes commands to faff about in the topics list
-func CommandFaqSet(state *state.State, sniper storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) api.InteractionResponse {
+func CommandFaqSet(state *state.State, sniper storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
 	if command.Options == nil || len(command.Options) != 1 {
 		log.Printf("[%s] /faqset command structure is somehow nil or not a single element. Wat.\n", event.GuildID)
-		return ResponseMessage("I'm sorry, what? Something very weird happened.")
+		return CommandResponse{ResponseMessage("I'm sorry, what? Something very weird happened."), nil}
 	}
 	switch command.Options[0].Name {
 	case "list":
-		return SubCommandFaqList(sniper, event.GuildID)
+		return CommandResponse{SubCommandFaqList(sniper, event.GuildID), nil}
 	case "add":
-		return SubCommandFaqAdd(sniper, event.GuildID, command.Options[0].Options)
+		return CommandResponse{SubCommandFaqAdd(sniper, event.GuildID, command.Options[0].Options), nil}
 	case "remove":
-		return SubCommandFaqRemove(sniper, event.GuildID, command.Options[0].Options)
+		return CommandResponse{SubCommandFaqRemove(sniper, event.GuildID, command.Options[0].Options), nil}
 	default:
-		return ResponseEphemeral("Unknown subcommand! Clearly *someone* dropped the ball!")
+		return CommandResponse{ResponseEphemeral("Unknown subcommand! Clearly *someone* dropped the ball!"), nil}
 	}
 }
 

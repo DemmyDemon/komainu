@@ -9,15 +9,19 @@ import (
 
 // Vote describes a vote attached to a Discord message.
 type Vote struct {
-	StartTime     int64
-	EndTime       int64
-	GuildID       discord.GuildID
-	MessageID     discord.MessageID
-	Question      string
-	Positive      string
-	Negative      string
-	PositiveVotes int
-	NegativeVotes int
+	StartTime    int64
+	EndTime      int64
+	GuildID      discord.GuildID
+	MessageID    discord.MessageID
+	Question     string
+	Option1      string
+	Option2      string
+	Option3      string
+	Option4      string
+	Option1Votes []discord.UserID
+	Option2Votes []discord.UserID
+	Option3Votes []discord.UserID
+	Option4Votes []discord.UserID
 }
 
 func (vote *Vote) Store(kvs KeyValueStore) error {
