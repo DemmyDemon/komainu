@@ -21,33 +21,17 @@
 |  X   | FAQ items     |
 |      | Votes         |
 |  X   | Seen times    |
-|      | Throttling    |
+|  X   | Throttling    |
 
 # Voting
-I can use the emoji 👎 and 👍 for positive and negative votes.
+After discussing votes with the people that will be using the bot, the idea of secret votes has come up.
+
+Buttons with ephemeral responses to clicking them should be able to record the vote without showing who voted what.
 
 # Throttling
-To avoid mass spamming of things like `/faq`, there might be need of a throttling function.
+The first iteration is implemented.
 
-Options:
-- Per-user ignore commands after processing one.
-- Globally ignore commands after processing one.
-- Per-user uses-per-minute.
-- Global uses-per-minute.
-- Different settings for different commands.
+It has "tokens" that get spent for user and channel *separately*, and they are "refunded" at a 10 second interval. Probably needs more work, but I think it has to be in actual use first.
 
-The downside to throttling is that if it is in use for a help system, it will limit how often helpers can actually help.
-Perhaps some sort of excemption system needs to exist?
+Considering this TODONE for now.
 
-So far I'm leaning towards denying commands based on user *and* channel, but only after a few messages.
-
-```go
-// Looks like this in my head:
-HandleCommand(command) response {
-    if addToken(command.guild, command.user) > MAXTOKENS { return denied(command) }
-    if addToken(command.guild, command.channel) > MAXTOKENS { return denied(command) }
-    return processProperly(command)
-}
-```
-
-This, of course, neccecitates a timeout for these "tokens", and to have them clear out automagically.
