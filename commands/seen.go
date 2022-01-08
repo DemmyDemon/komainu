@@ -13,7 +13,7 @@ import (
 )
 
 // CommandSeen processes a command to look up when a user was last seen.
-func CommandSeen(state *state.State, sniper storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
+func CommandSeen(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
 	if command.Options != nil && len(command.Options) > 0 {
 		option, err := command.Options[0].SnowflakeValue()
 		if err != nil {
@@ -27,9 +27,9 @@ func CommandSeen(state *state.State, sniper storage.KeyValueStore, event *gatewa
 			return CommandResponse{ResponseEphemeral("I'm right here, buddy!"), nil}
 		}
 
-		found, timestamp, err := storage.LastSeen(sniper, event.GuildID, discord.UserID(option))
+		found, timestamp, err := storage.LastSeen(kvs, event.GuildID, discord.UserID(option))
 		if err != nil {
-			log.Printf("[%s] Failed to get %s from Sniper for /seen lookup: %s\n", event.GuildID, option, err)
+			log.Printf("[%s] Failed to get %s from Key/Value Store for /seen lookup: %s\n", event.GuildID, option, err)
 			return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
 		}
 		if !found {
@@ -41,7 +41,7 @@ func CommandSeen(state *state.State, sniper storage.KeyValueStore, event *gatewa
 }
 
 // CommandInactive processes a command to list who has not been active in a given timeframe.
-func CommandInactive(state *state.State, sniper storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
+func CommandInactive(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
 	days := int64(30)
 	if command.Options != nil && len(command.Options) > 0 {
 		d, err := command.Options[0].IntValue()
@@ -67,7 +67,7 @@ func CommandInactive(state *state.State, sniper storage.KeyValueStore, event *ga
 	inactiveCount := 0
 
 	for _, member := range members {
-		seen, when, err := storage.LastSeen(sniper, event.GuildID, member.User.ID)
+		seen, when, err := storage.LastSeen(kvs, event.GuildID, member.User.ID)
 		if err != nil {
 			log.Printf("[%s] Failed to get a storage.LastSeen for %s: %s", event.GuildID, member.User.ID, err)
 			return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}

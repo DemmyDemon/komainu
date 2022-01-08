@@ -15,13 +15,13 @@ import (
 )
 
 // CommandFaq processes a command to retrieve a FAQ item.
-func CommandFaq(state *state.State, sniper storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
+func CommandFaq(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
 	if command.Options == nil || len(command.Options) != 1 {
 		log.Printf("[%s] /faq command structure is somehow nil or not a single element. Wat.\n", event.GuildID)
 		return CommandResponse{ResponseEphemeral("Invalid command structure."), nil}
 	}
 	topic := strings.ToLower(command.Options[0].String())
-	exists, value, err := sniper.GetString(event.GuildID, "faq", topic)
+	exists, value, err := kvs.GetString(event.GuildID, "faq", topic)
 	if err != nil {
 		log.Printf("[%s] /faq failed to GetString the topic %s: %s", event.GuildID, topic, err)
 		return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
@@ -33,39 +33,39 @@ func CommandFaq(state *state.State, sniper storage.KeyValueStore, event *gateway
 }
 
 // CommandFaqSet processes commands to faff about in the topics list
-func CommandFaqSet(state *state.State, sniper storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
+func CommandFaqSet(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
 	if command.Options == nil || len(command.Options) != 1 {
 		log.Printf("[%s] /faqset command structure is somehow nil or not a single element. Wat.\n", event.GuildID)
 		return CommandResponse{ResponseMessage("I'm sorry, what? Something very weird happened."), nil}
 	}
 	switch command.Options[0].Name {
 	case "list":
-		return CommandResponse{SubCommandFaqList(sniper, event.GuildID), nil}
+		return CommandResponse{SubCommandFaqList(kvs, event.GuildID), nil}
 	case "add":
-		return CommandResponse{SubCommandFaqAdd(sniper, event.GuildID, command.Options[0].Options), nil}
+		return CommandResponse{SubCommandFaqAdd(kvs, event.GuildID, command.Options[0].Options), nil}
 	case "remove":
-		return CommandResponse{SubCommandFaqRemove(sniper, event.GuildID, command.Options[0].Options), nil}
+		return CommandResponse{SubCommandFaqRemove(kvs, event.GuildID, command.Options[0].Options), nil}
 	default:
 		return CommandResponse{ResponseEphemeral("Unknown subcommand! Clearly *someone* dropped the ball!"), nil}
 	}
 }
 
 // SubCommandFaqAdd processes a subcommand to store a FAQ item.
-func SubCommandFaqAdd(sniper storage.KeyValueStore, guildID discord.GuildID, options []discord.CommandInteractionOption) api.InteractionResponse {
+func SubCommandFaqAdd(kvs storage.KeyValueStore, guildID discord.GuildID, options []discord.CommandInteractionOption) api.InteractionResponse {
 	if options == nil || len(options) != 2 {
 		log.Printf("[%s] /faqset add command structure is somehow nil or not two elements. Wat.\n", guildID)
 		return ResponseEphemeral("Invalid command structure.")
 	}
 	key := strings.ToLower(options[0].String())
 	value := options[1].String()
-	err := sniper.Set(guildID, "faq", key, value)
+	err := kvs.Set(guildID, "faq", key, value)
 	if err != nil {
 		log.Printf("[%s] /faqset add storage failed: %s", guildID, err)
 		return ResponseEphemeral("An error occured, and has been logged.")
 	}
 
 	faqList := []string{}
-	_, err = sniper.GetObject(guildID, "faq", "LIST", &faqList)
+	_, err = kvs.GetObject(guildID, "faq", "LIST", &faqList)
 	if err != nil {
 		log.Printf("[%s] /faqset add storage is fine, but failed to get the LIST: %s", guildID, err)
 		return ResponseMessageNoMention(fmt.Sprintf("Kinda learned %s: %s", key, value))
@@ -81,7 +81,7 @@ func SubCommandFaqAdd(sniper storage.KeyValueStore, guildID discord.GuildID, opt
 
 	if !found {
 		faqList = append(faqList, key)
-		err = sniper.Set(guildID, "faq", "LIST", faqList)
+		err = kvs.Set(guildID, "faq", "LIST", faqList)
 		if err != nil {
 			log.Printf("[%s] /faqset add storage is fine, but failed to store the LIST: %s", guildID, err)
 			return ResponseMessageNoMention(fmt.Sprintf("Sort of learned %s: %s", key, value))
@@ -92,14 +92,14 @@ func SubCommandFaqAdd(sniper storage.KeyValueStore, guildID discord.GuildID, opt
 }
 
 // SubCommandFaqRemove processes a command to remove a FAQ item.
-func SubCommandFaqRemove(sniper storage.KeyValueStore, guildID discord.GuildID, options []discord.CommandInteractionOption) api.InteractionResponse {
+func SubCommandFaqRemove(kvs storage.KeyValueStore, guildID discord.GuildID, options []discord.CommandInteractionOption) api.InteractionResponse {
 	if options == nil || len(options) != 1 {
 		log.Printf("[%s] /faqset remove command structure is somehow nil or not one element. Wat.\n", guildID)
 		return ResponseEphemeral("Invalid command structure.")
 	}
 	topic := strings.ToLower(options[0].String())
 	//topic := command.Options[0].String()
-	exists, value, err := sniper.GetString(guildID, "faq", topic)
+	exists, value, err := kvs.GetString(guildID, "faq", topic)
 	if err != nil {
 		log.Printf("[%s] /faqset remove failed to GetString the topic %s: %s", guildID, topic, err)
 		return ResponseEphemeral("An error occured, and has been logged.")
@@ -107,7 +107,7 @@ func SubCommandFaqRemove(sniper storage.KeyValueStore, guildID discord.GuildID, 
 	if !exists {
 		return ResponseEphemeral(fmt.Sprintf("Sorry, I've never heard of %s", topic))
 	}
-	removed, err := sniper.Delete(guildID, "faq", topic)
+	removed, err := kvs.Delete(guildID, "faq", topic)
 	if err != nil {
 		log.Printf("[%s] /faqset remove failed to Delete the topic %s: %s", guildID, topic, err)
 		return ResponseEphemeral("An error occured, and has been logged.")
@@ -118,7 +118,7 @@ func SubCommandFaqRemove(sniper storage.KeyValueStore, guildID discord.GuildID, 
 	}
 
 	faqList := []string{}
-	_, err = sniper.GetObject(guildID, "faq", "LIST", &faqList)
+	_, err = kvs.GetObject(guildID, "faq", "LIST", &faqList)
 	if err != nil {
 		log.Printf("[%s] /faqset remove storage is fine, but failed to get the LIST: %s", guildID, err)
 	}
@@ -129,7 +129,7 @@ func SubCommandFaqRemove(sniper storage.KeyValueStore, guildID discord.GuildID, 
 			break
 		}
 	}
-	err = sniper.Set(guildID, "faq", "LIST", faqList)
+	err = kvs.Set(guildID, "faq", "LIST", faqList)
 	if err != nil {
 		log.Printf("[%s] /faqset remove storage is fine, but failed to save the LIST: %s", guildID, err)
 		return ResponseMessageNoMention(fmt.Sprintf("Kinda forgot %s: %s", topic, value))
@@ -139,9 +139,9 @@ func SubCommandFaqRemove(sniper storage.KeyValueStore, guildID discord.GuildID, 
 }
 
 // SubCommandFaqList processes a subcommand to list all FAQ items.
-func SubCommandFaqList(sniper storage.KeyValueStore, guildID discord.GuildID) api.InteractionResponse {
+func SubCommandFaqList(kvs storage.KeyValueStore, guildID discord.GuildID) api.InteractionResponse {
 	faqList := []string{}
-	exists, err := sniper.GetObject(guildID, "faq", "LIST", &faqList)
+	exists, err := kvs.GetObject(guildID, "faq", "LIST", &faqList)
 	if err != nil {
 		log.Printf("[%s] /faqset list failed to get the LIST: %s", guildID, err)
 		return ResponseMessage("An error occured, and has been logged.")

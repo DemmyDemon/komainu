@@ -17,7 +17,7 @@ import (
 
 type CommandFunction func(
 	state *state.State,
-	sniper storage.KeyValueStore,
+	kvs storage.KeyValueStore,
 	event *gateway.InteractionCreateEvent,
 	command *discord.CommandInteraction,
 ) CommandResponse
@@ -191,14 +191,14 @@ func GetCommandGroups() []string {
 }
 
 // HasAccess checks if the given user has access to the given command group in the given guild.
-func HasAccess(sniper storage.KeyValueStore, state *state.State, guildID discord.GuildID, channelID discord.ChannelID, member *discord.Member, group string) bool {
+func HasAccess(kvs storage.KeyValueStore, state *state.State, guildID discord.GuildID, channelID discord.ChannelID, member *discord.Member, group string) bool {
 	if member == nil {
 		return false
 	}
 
 	// First we check the KVS
 	granted := []discord.RoleID{}
-	found, err := sniper.GetObject(guildID, "access", group, &granted)
+	found, err := kvs.GetObject(guildID, "access", group, &granted)
 	if err != nil {
 		log.Printf("[%s] HasAccess check failed to obtain access list from KVS: %s\n", guildID, err)
 	} else if found {
@@ -227,7 +227,7 @@ func HasAccess(sniper storage.KeyValueStore, state *state.State, guildID discord
 }
 
 // AddCommandHandler, surprisingly, adds the command handler.
-func AddCommandHandler(state *state.State, sniper storage.KeyValueStore) {
+func AddCommandHandler(state *state.State, kvs storage.KeyValueStore) {
 	commandGroups = GetCommandGroups()
 	state.AddHandler(func(e *gateway.InteractionCreateEvent) {
 
@@ -248,14 +248,14 @@ func AddCommandHandler(state *state.State, sniper storage.KeyValueStore) {
 			}
 
 			if val, ok := commands[command.Name]; ok {
-				if !HasAccess(sniper, state, e.GuildID, e.ChannelID, e.Member, val.group) {
+				if !HasAccess(kvs, state, e.GuildID, e.ChannelID, e.Member, val.group) {
 					if err := state.RespondInteraction(e.ID, e.Token, ResponseEphemeral("Sorry, access was denied.")); err != nil {
 						log.Println("An error occured posting access denied response:", err)
 					}
 					return
 				}
 
-				response := val.code(state, sniper, e, command)
+				response := val.code(state, kvs, e, command)
 
 				if err := state.RespondInteraction(e.ID, e.Token, response.InteractionResponse); err != nil {
 					log.Println("Failed to send interaction response:", err)

@@ -47,15 +47,15 @@ func main() {
 		log.Println("No logfile specified: Will just output to STDOUT and hope for the best.")
 	}
 
-	sniper, err := storage.OpenSniper("data/sniper")
+	kvs, err := storage.OpenSniper("data/sniper")
 	if err != nil {
-		log.Fatalln("Could not open Sniper data store:", err)
+		log.Fatalln("Could not open KVS:", err)
 	}
-	defer sniper.Close()
+	defer kvs.Close()
 
 	log.Println("Preparing to connect to Discord")
 
-	state := bot.Connect(&cfg, sniper)
+	state := bot.Connect(&cfg, kvs)
 	defer state.Close()
 
 	WaitForInterrupt()

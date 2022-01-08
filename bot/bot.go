@@ -12,7 +12,7 @@ import (
 )
 
 // Connect connects to Discord
-func Connect(cfg *storage.Configuration, sniper storage.KeyValueStore) *state.State {
+func Connect(cfg *storage.Configuration, kvs storage.KeyValueStore) *state.State {
 	var token = os.Getenv("BOT_TOKEN")
 	if token == "" {
 		log.Fatalln("No BOT_TOKEN found in environment variables.")
@@ -25,7 +25,7 @@ func Connect(cfg *storage.Configuration, sniper storage.KeyValueStore) *state.St
 			return // It's either a private message, or an ephemeral-response command. Doesn't count.
 		}
 
-		if err := storage.See(sniper, e.GuildID, e.Author.ID); err != nil {
+		if err := storage.See(kvs, e.GuildID, e.Author.ID); err != nil {
 			log.Printf("Seen in %d: %d sent a message in %s, BUT WAS NOT RECORDED:%s\n", e.GuildID, e.Author.ID, e.ChannelID, err)
 		} else {
 			log.Printf("Seen in %d: %d sent a message in %s\n", e.GuildID, e.Author.ID, e.ChannelID)
@@ -36,7 +36,7 @@ func Connect(cfg *storage.Configuration, sniper storage.KeyValueStore) *state.St
 		log.Printf("Reaction in %d: %d reacted to message %s in %s with %s", e.GuildID, e.UserID, e.MessageID, e.ChannelID, e.Emoji)
 	})
 
-	commands.AddCommandHandler(state, sniper)
+	commands.AddCommandHandler(state, kvs)
 
 	state.AddHandler(func(e *gateway.GuildCreateEvent) {
 		commands.RegisterCommands(state, e.ID)

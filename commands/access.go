@@ -14,25 +14,25 @@ import (
 )
 
 // CommandAccess processes a command to list access entries.
-func CommandAccess(state *state.State, sniper storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
+func CommandAccess(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
 	if command.Options == nil || len(command.Options) != 1 {
 		log.Printf("[%s] /access command structure is somehow nil or not a single element. Wat.\n", event.GuildID)
 		return CommandResponse{ResponseMessage("I'm sorry, what? Something very weird happened."), nil}
 	}
 	switch command.Options[0].Name {
 	case "grant":
-		return CommandResponse{SubCommandAccessGrant(sniper, event.GuildID, command.Options[0].Options), nil}
+		return CommandResponse{SubCommandAccessGrant(kvs, event.GuildID, command.Options[0].Options), nil}
 	case "revoke":
-		return CommandResponse{SubCommandAccessRevoke(sniper, event.GuildID, command.Options[0].Options), nil}
+		return CommandResponse{SubCommandAccessRevoke(kvs, event.GuildID, command.Options[0].Options), nil}
 	case "list":
-		return CommandResponse{SubCommandAccessList(sniper, event.GuildID), nil}
+		return CommandResponse{SubCommandAccessList(kvs, event.GuildID), nil}
 	default:
 		return CommandResponse{ResponseMessage("Unknown subcommand! Clearly *someone* dropped the ball!"), nil}
 	}
 }
 
 // SubCommandAccessGrant processes a sub command to grant access.
-func SubCommandAccessGrant(sniper storage.KeyValueStore, guildID discord.GuildID, options []discord.CommandInteractionOption) api.InteractionResponse {
+func SubCommandAccessGrant(kvs storage.KeyValueStore, guildID discord.GuildID, options []discord.CommandInteractionOption) api.InteractionResponse {
 	if options == nil || len(options) != 2 {
 		log.Printf("[%s] /access grant command structure is somehow nil or not two elements. Wat.\n", guildID)
 		return ResponseEphemeral("Invalid command structure.")
@@ -51,14 +51,14 @@ func SubCommandAccessGrant(sniper storage.KeyValueStore, guildID discord.GuildID
 	roleID := discord.RoleID(value)
 
 	granted := []discord.RoleID{}
-	found, err := sniper.GetObject(guildID, "access", commandGroup, &granted)
+	found, err := kvs.GetObject(guildID, "access", commandGroup, &granted)
 	if err != nil {
 		log.Printf("[%s] /access grant failed to obtain access list from KVS: %s\n", guildID, err)
 		return ResponseEphemeral("An error occured, and has been logged.")
 	}
 	if !found || !utility.ContainsRole(granted, roleID) {
 		granted = append(granted, roleID)
-		err := sniper.Set(guildID, "access", commandGroup, granted)
+		err := kvs.Set(guildID, "access", commandGroup, granted)
 		if err != nil {
 			log.Printf("[%s] /access grant failed to store updated access list in KVS: %s\n", guildID, err)
 			return ResponseEphemeral("An error occured, and has been logged.")
@@ -68,7 +68,7 @@ func SubCommandAccessGrant(sniper storage.KeyValueStore, guildID discord.GuildID
 }
 
 // SubCommandAccessRevoke processes a sub command to revoke access.
-func SubCommandAccessRevoke(sniper storage.KeyValueStore, guildID discord.GuildID, options []discord.CommandInteractionOption) api.InteractionResponse {
+func SubCommandAccessRevoke(kvs storage.KeyValueStore, guildID discord.GuildID, options []discord.CommandInteractionOption) api.InteractionResponse {
 	if options == nil || len(options) != 2 {
 		log.Printf("[%s] /access revoke command structure is somehow nil or not two elements. Wat.\n", guildID)
 		return ResponseEphemeral("Invalid command structure.")
@@ -87,7 +87,7 @@ func SubCommandAccessRevoke(sniper storage.KeyValueStore, guildID discord.GuildI
 	roleID := discord.RoleID(value)
 
 	granted := []discord.RoleID{}
-	found, err := sniper.GetObject(guildID, "access", commandGroup, &granted)
+	found, err := kvs.GetObject(guildID, "access", commandGroup, &granted)
 	if err != nil {
 		log.Printf("[%s] /access revoke failed to obtain access list from KVS: %s\n", guildID, err)
 		return ResponseEphemeral("An error occured, and has been logged.")
@@ -102,7 +102,7 @@ func SubCommandAccessRevoke(sniper storage.KeyValueStore, guildID discord.GuildI
 			}
 		}
 
-		err := sniper.Set(guildID, "access", commandGroup, granted)
+		err := kvs.Set(guildID, "access", commandGroup, granted)
 		if err != nil {
 			log.Printf("[%s] /access revoke failed to store updated access list in KVS: %s\n", guildID, err)
 			return ResponseEphemeral("An error occured, and has been logged.")
@@ -112,12 +112,12 @@ func SubCommandAccessRevoke(sniper storage.KeyValueStore, guildID discord.GuildI
 }
 
 // SubCommandAccessList processes a sub command to list who has access to what.
-func SubCommandAccessList(sniper storage.KeyValueStore, guildID discord.GuildID) api.InteractionResponse {
+func SubCommandAccessList(kvs storage.KeyValueStore, guildID discord.GuildID) api.InteractionResponse {
 	var sb strings.Builder
 	fmt.Fprintln(&sb, "Current access is:")
 	for _, group := range commandGroups {
 		granted := []discord.RoleID{}
-		found, err := sniper.GetObject(guildID, "access", group, &granted)
+		found, err := kvs.GetObject(guildID, "access", group, &granted)
 		if err != nil {
 			log.Printf("[%s] /access list failed to obtain access list from KVS: %s\n", guildID, err)
 			return ResponseEphemeral("An error occured, and has been logged.")
