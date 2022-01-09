@@ -15,6 +15,7 @@ type boltData struct {
 	bolt *bolt.DB
 }
 
+// OpenBolt opens the bolt database at the given path for handling.
 func OpenBolt(path string) (*boltData, error) {
 	newBolt, err := bolt.Open(path, 0666, nil)
 	if err != nil {
@@ -25,6 +26,7 @@ func OpenBolt(path string) (*boltData, error) {
 	}, nil
 }
 
+// Open opens the bolt database at the given path for handling.
 func (b *boltData) Open(path string) error {
 	newBolt, err := bolt.Open(path, 0666, nil)
 	if err != nil {
@@ -34,11 +36,13 @@ func (b *boltData) Open(path string) error {
 	return nil
 }
 
+// Close closes the bolt database behind the scenes.
 func (b *boltData) Close() error {
 	return b.bolt.Close()
 }
 
-func (b *boltData) store(bucketName []byte, key []byte, value []byte) error {
+// store is the unexported backing store routine to actually write to bolt
+func (b *boltData) store(bucketName []byte, key []byte, value []byte) (err error) {
 	return b.bolt.Update(func(tx *bolt.Tx) error {
 		if tx == nil {
 			return errors.New("could not store to bolt: failed to open transaction")
@@ -54,15 +58,19 @@ func (b *boltData) store(bucketName []byte, key []byte, value []byte) error {
 	})
 }
 
-func (b *boltData) bucketName(guild discord.GuildID, collection string) []byte {
+// bucketName returns a byte array based on the guild and collection given, in byte slice form, suitable for use as a bucket name.
+func (b *boltData) bucketName(guild discord.GuildID, collection string) (bucketName []byte) {
 	return []byte(fmt.Sprintf("%s/%s", guild, collection))
 }
 
-func (b *boltData) keyName(key interface{}) []byte {
+// keyName takes almost any random thing and tries to make a string, and then a byte slice out of it, returning that byte slice.
+// Used to make a byte slice suitable as a key in bolt
+func (b *boltData) keyName(key interface{}) (keyName []byte) {
 	return []byte(fmt.Sprintf("%v", key))
 }
 
-func (b *boltData) Set(guild discord.GuildID, collection string, key interface{}, rawValue interface{}) error {
+// Set takes a guild, collection and key, along with a raw value, and tries to stuff that value into bolt in a somewhat sane manner.
+func (b *boltData) Set(guild discord.GuildID, collection string, key interface{}, rawValue interface{}) (err error) {
 	bucketName := b.bucketName(guild, collection)
 	keyName := b.keyName(key)
 
@@ -88,14 +96,12 @@ func (b *boltData) Set(guild discord.GuildID, collection string, key interface{}
 	}
 }
 
-func (b *boltData) Get(guild discord.GuildID, collection string, key interface{}) (bool, []byte, error) {
+// Get takes a guild, collection and key, and tries to look up the value stored in bolt under that key.
+func (b *boltData) Get(guild discord.GuildID, collection string, key interface{}) (exist bool, value []byte, err error) {
 	bucketName := b.bucketName(guild, collection)
 	keyName := b.keyName(key)
 
-	exists := false
-	var value []byte
-
-	err := b.bolt.View(func(tx *bolt.Tx) error {
+	err = b.bolt.View(func(tx *bolt.Tx) error {
 		if tx == nil {
 			return errors.New("could not Get from bolt: failed to open transaction")
 		}
@@ -106,15 +112,17 @@ func (b *boltData) Get(guild discord.GuildID, collection string, key interface{}
 		got := bucket.Get(keyName)
 		if got != nil {
 			value = got // Implicit copy
-			exists = true
+			exist = true
 		}
 		return nil
 	})
 
-	return exists, value, err
+	return exist, value, err
 }
 
-func (b *boltData) GetObject(guild discord.GuildID, collection string, key interface{}, target interface{}) (bool, error) {
+// GetObject attempts to decode whatever is stored under the given key into the target reference.
+// Best of luck!
+func (b *boltData) GetObject(guild discord.GuildID, collection string, key interface{}, target interface{}) (exist bool, err error) {
 	exist, raw, err := b.Get(guild, collection, key)
 
 	if err == nil && exist {
@@ -125,8 +133,8 @@ func (b *boltData) GetObject(guild discord.GuildID, collection string, key inter
 	return exist, err
 }
 
-func (b *boltData) GetString(guild discord.GuildID, collection string, key interface{}) (bool, string, error) {
-	value := ""
+// GetString looks up the data under the given guild, collection and key, assumes it's a string and returns if the key exists, the found string and any error encountered.
+func (b *boltData) GetString(guild discord.GuildID, collection string, key interface{}) (exist bool, value string, err error) {
 	exist, raw, err := b.Get(guild, collection, key)
 
 	if err == nil && exist {
@@ -135,13 +143,14 @@ func (b *boltData) GetString(guild discord.GuildID, collection string, key inter
 	return exist, value, err
 }
 
-func (b *boltData) GetInt64(guild discord.GuildID, collection string, key interface{}) (bool, int64, error) {
-	exist, value, err := b.GetUint64(guild, collection, key)
-	return exist, int64(value), err
+// GetString looks up the data under the given guild, collection and key, assumes it's an int64 and returns if the key exists, the found int64 and any error encountered.
+func (b *boltData) GetInt64(guild discord.GuildID, collection string, key interface{}) (exist bool, value int64, err error) {
+	exist, raw, err := b.GetUint64(guild, collection, key)
+	return exist, int64(raw), err
 }
 
-func (b *boltData) GetUint64(guild discord.GuildID, collection string, key interface{}) (bool, uint64, error) {
-	value := uint64(0)
+// GetString looks up the data under the given guild, collection and key, assumes it's a uint64 and returns if the key exists, the found uint64 and any error encountered.
+func (b *boltData) GetUint64(guild discord.GuildID, collection string, key interface{}) (exist bool, value uint64, err error) {
 	exist, raw, err := b.Get(guild, collection, key)
 
 	if err == nil && exist {
@@ -151,13 +160,14 @@ func (b *boltData) GetUint64(guild discord.GuildID, collection string, key inter
 
 }
 
-func (b *boltData) Delete(guild discord.GuildID, collection string, key interface{}) (bool, error) {
+// Delete checks if it is possible to delete the value under the given guild, collection and key (as in "The Bucket Exists"), and attempts to do so.
+// It returns if a delete attempt was made and any error encountered.
+// If the last key in a bucket is removed, it also removes the bucket.
+func (b *boltData) Delete(guild discord.GuildID, collection string, key interface{}) (wasDeleted bool, err error) {
 	bucketName := b.bucketName(guild, collection)
 	keyName := b.keyName(key)
 
-	wasDeleted := false
-
-	err := b.bolt.Update(func(tx *bolt.Tx) error {
+	err = b.bolt.Update(func(tx *bolt.Tx) error {
 		if tx == nil {
 			return errors.New("could not delete from bolt: failed to open transaction")
 		}
