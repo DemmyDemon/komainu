@@ -64,30 +64,6 @@ func SubCommandFaqAdd(kvs storage.KeyValueStore, guildID discord.GuildID, option
 		return ResponseEphemeral("An error occured, and has been logged.")
 	}
 
-	faqList := []string{}
-	_, err = kvs.GetObject(guildID, "faq", "LIST", &faqList)
-	if err != nil {
-		log.Printf("[%s] /faqset add storage is fine, but failed to get the LIST: %s", guildID, err)
-		return ResponseMessageNoMention(fmt.Sprintf("Kinda learned %s: %s", key, value))
-	}
-
-	found := false
-	for _, candidate := range faqList {
-		if candidate == key {
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		faqList = append(faqList, key)
-		err = kvs.Set(guildID, "faq", "LIST", faqList)
-		if err != nil {
-			log.Printf("[%s] /faqset add storage is fine, but failed to store the LIST: %s", guildID, err)
-			return ResponseMessageNoMention(fmt.Sprintf("Sort of learned %s: %s", key, value))
-		}
-	}
-
 	return ResponseMessageNoMention(fmt.Sprintf("Learned %s: %s", key, value))
 }
 
@@ -117,36 +93,17 @@ func SubCommandFaqRemove(kvs storage.KeyValueStore, guildID discord.GuildID, opt
 		return ResponseEphemeral(fmt.Sprintf("Sorry, I've never heard of %s", topic))
 	}
 
-	faqList := []string{}
-	_, err = kvs.GetObject(guildID, "faq", "LIST", &faqList)
-	if err != nil {
-		log.Printf("[%s] /faqset remove storage is fine, but failed to get the LIST: %s", guildID, err)
-	}
-	for idx, item := range faqList {
-		if item == topic {
-			faqList[idx] = faqList[len(faqList)-1] // Copy last element to index idx.
-			faqList = faqList[:len(faqList)-1]     // Truncate slice.
-			break
-		}
-	}
-	err = kvs.Set(guildID, "faq", "LIST", faqList)
-	if err != nil {
-		log.Printf("[%s] /faqset remove storage is fine, but failed to save the LIST: %s", guildID, err)
-		return ResponseMessageNoMention(fmt.Sprintf("Kinda forgot %s: %s", topic, value))
-	}
-
 	return ResponseMessageNoMention(fmt.Sprintf("Forgot %s: %s", topic, value))
 }
 
 // SubCommandFaqList processes a subcommand to list all FAQ items.
 func SubCommandFaqList(kvs storage.KeyValueStore, guildID discord.GuildID) api.InteractionResponse {
-	faqList := []string{}
-	exists, err := kvs.GetObject(guildID, "faq", "LIST", &faqList)
+	faqList, err := kvs.Keys(guildID, "faq")
 	if err != nil {
-		log.Printf("[%s] /faqset list failed to get the LIST: %s", guildID, err)
+		log.Printf("[%s] /faqset list failed to get the list: %s", guildID, err)
 		return ResponseMessage("An error occured, and has been logged.")
 	}
-	if exists && len(faqList) > 0 {
+	if len(faqList) > 0 {
 		sort.Strings(faqList)
 		var sb strings.Builder
 		fmt.Fprintln(&sb, "**Here are the topics I know:**")
@@ -155,5 +112,5 @@ func SubCommandFaqList(kvs storage.KeyValueStore, guildID discord.GuildID) api.I
 		}
 		return ResponseMessageNoMention(sb.String())
 	}
-	return ResponseEphemeral("I'm sad to say, there are no known topics. Maybe I just kinda sort of learned it, and didn't put anything in the list?")
+	return ResponseEphemeral("I'm sad to say, there are no known topics.")
 }

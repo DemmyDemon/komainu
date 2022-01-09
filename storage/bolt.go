@@ -143,13 +143,13 @@ func (b *boltData) GetString(guild discord.GuildID, collection string, key inter
 	return exist, value, err
 }
 
-// GetString looks up the data under the given guild, collection and key, assumes it's an int64 and returns if the key exists, the found int64 and any error encountered.
+// GetInt64 looks up the data under the given guild, collection and key, assumes it's an int64 and returns if the key exists, the found int64 and any error encountered.
 func (b *boltData) GetInt64(guild discord.GuildID, collection string, key interface{}) (exist bool, value int64, err error) {
 	exist, raw, err := b.GetUint64(guild, collection, key)
 	return exist, int64(raw), err
 }
 
-// GetString looks up the data under the given guild, collection and key, assumes it's a uint64 and returns if the key exists, the found uint64 and any error encountered.
+// GetInt64 looks up the data under the given guild, collection and key, assumes it's a uint64 and returns if the key exists, the found uint64 and any error encountered.
 func (b *boltData) GetUint64(guild discord.GuildID, collection string, key interface{}) (exist bool, value uint64, err error) {
 	exist, raw, err := b.Get(guild, collection, key)
 
@@ -180,7 +180,7 @@ func (b *boltData) Delete(guild discord.GuildID, collection string, key interfac
 		}
 		wasDeleted = true // NOTE: This could be a lie, but we're not going to Get the value just to check if it existed before.
 
-		if bucket.Stats().KeyN == 0 { // FIXME: This is a lot of processing for just one comparison. Just leave the empty bucket?
+		if bucket.Stats().KeyN == 0 { // This is a lot of processing for just one comparison. It's fine, this is dwarved by all the Discord HTTP stuff.
 			if err := tx.DeleteBucket(bucketName); err != nil {
 				return fmt.Errorf("deleted key was last in bucket, but deleting bucket failed: %w", err)
 			}
@@ -189,4 +189,27 @@ func (b *boltData) Delete(guild discord.GuildID, collection string, key interfac
 	})
 
 	return wasDeleted, err
+}
+
+// Keys returns a slice of strings representing the keys in the given guild and collection.
+// Note that if the keys originally used were not strings, this will be garbage data.
+// If the bucket does not exists, or has no keys, a zero-length slice is returned.
+func (b *boltData) Keys(guild discord.GuildID, collection string) (keys []string, err error) {
+	bucketName := b.bucketName(guild, collection)
+
+	err = b.bolt.View(func(tx *bolt.Tx) error {
+		if tx == nil {
+			return errors.New("could not get Keys from bolt: failed to open transaction")
+		}
+		bucket := tx.Bucket(bucketName)
+		if bucket == nil {
+			return nil
+		}
+		bucket.ForEach(func(k, _ []byte) error {
+			keys = append(keys, string(k))
+			return nil
+		})
+		return nil
+	})
+	return keys, err
 }
