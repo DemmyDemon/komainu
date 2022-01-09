@@ -47,7 +47,7 @@ func main() {
 		log.Println("No logfile specified: Will just output to STDOUT and hope for the best.")
 	}
 
-	kvs, err := storage.OpenSniper("data/sniper")
+	kvs, err := storage.OpenBolt("data/bolt")
 	if err != nil {
 		log.Fatalln("Could not open KVS:", err)
 	}
