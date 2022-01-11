@@ -33,3 +33,13 @@ func ContainsRole(haystack []discord.RoleID, needle discord.RoleID) bool {
 	}
 	return false
 }
+
+// ContainsUser checks if the haystack of UserIDs contains the needle UserID
+func ContainsUser(haystack []discord.UserID, needle discord.UserID) bool {
+	for _, candidate := range haystack {
+		if candidate == needle {
+			return true
+		}
+	}
+	return false
+}
