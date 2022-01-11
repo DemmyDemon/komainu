@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"fmt"
 	"komainu/storage"
 	"komainu/utility"
 	"log"
@@ -24,7 +23,7 @@ type CommandFunction func(
 
 type CommandResponse struct {
 	InteractionResponse api.InteractionResponse
-	Callback            func(discord.MessageID)
+	Callback            func(message *discord.Message)
 }
 
 type Command struct {
@@ -147,22 +146,22 @@ var commands = map[string]Command{
 		},
 		&discord.StringOption{
 			OptionName:  "first",
-			Description: "The first vote option description",
+			Description: "The first vote option description (80 char max)",
 			Required:    true,
 		},
 		&discord.StringOption{
 			OptionName:  "second",
-			Description: "The second vote option description",
+			Description: "The second vote option description (80 char max)",
 			Required:    true,
 		},
 		&discord.StringOption{
 			OptionName:  "third",
-			Description: "The third vote option description",
+			Description: "The third vote option description (80 char max)",
 			Required:    false,
 		},
 		&discord.StringOption{
 			OptionName:  "fourth",
-			Description: "The fourth vote option description",
+			Description: "The fourth vote option description (80 char max)",
 			Required:    false,
 		},
 	}},
@@ -226,12 +225,24 @@ func HasAccess(kvs storage.KeyValueStore, state *state.State, guildID discord.Gu
 	return false // If all else fails, they're not authorized.
 }
 
+func AddDeleteHandler(state *state.State, kvs storage.KeyValueStore) {
+	state.AddHandler(func(e *gateway.MessageDeleteEvent) {
+		if e.GuildID == discord.NullGuildID {
+			return
+		}
+		_, err := kvs.Delete(e.GuildID, "votes", e.ID)
+		if err != nil {
+			log.Printf("[%s] Encountered an error removing vote from KVS after message deletion: %s\n", e.GuildID, err)
+		}
+	})
+}
+
 // AddCommandHandler, surprisingly, adds the command handler.
 func AddCommandHandler(state *state.State, kvs storage.KeyValueStore) {
 	commandGroups = GetCommandGroups()
 	state.AddHandler(func(e *gateway.InteractionCreateEvent) {
 
-		switch command := e.Data.(type) {
+		switch interaction := e.Data.(type) {
 		case *discord.CommandInteraction:
 
 			if !userTokenBin.Allocate(discord.Snowflake(e.GuildID), discord.Snowflake(e.Member.User.ID)) {
@@ -247,7 +258,7 @@ func AddCommandHandler(state *state.State, kvs storage.KeyValueStore) {
 				return
 			}
 
-			if val, ok := commands[command.Name]; ok {
+			if val, ok := commands[interaction.Name]; ok {
 				if !HasAccess(kvs, state, e.GuildID, e.ChannelID, e.Member, val.group) {
 					if err := state.RespondInteraction(e.ID, e.Token, ResponseEphemeral("Sorry, access was denied.")); err != nil {
 						log.Println("An error occured posting access denied response:", err)
@@ -255,7 +266,7 @@ func AddCommandHandler(state *state.State, kvs storage.KeyValueStore) {
 					return
 				}
 
-				response := val.code(state, kvs, e, command)
+				response := val.code(state, kvs, e, interaction)
 
 				if err := state.RespondInteraction(e.ID, e.Token, response.InteractionResponse); err != nil {
 					log.Println("Failed to send interaction response:", err)
@@ -263,25 +274,30 @@ func AddCommandHandler(state *state.State, kvs storage.KeyValueStore) {
 				if response.Callback != nil {
 					message, err := state.InteractionResponse(e.AppID, e.Token)
 					if err != nil {
-						log.Printf("Error %s getting message reference for %s command callback", err, command.Name)
+						log.Printf("Error %s getting message reference for %s command callback\n", err, interaction.Name)
 						return
 					}
 					if message != nil && message.ID != discord.NullMessageID {
-						response.Callback(message.ID)
+						response.Callback(message)
 					}
 				}
 			}
 		case discord.ComponentInteraction:
-			// TODO: Check if this is a vote first, and if it is, toss it over to commands/vote.go for processing.
-			// It might be that I have other, different ComponentInteractiong thingbobs in the future.
-			if _, err := state.EditMessage(e.ChannelID, e.Message.ID, fmt.Sprintf("Response was: %s\n", command.ID())); err != nil {
-				log.Println("Failed to edit message based on button click:", err)
+			isVote, response, err := storage.HandleInteractionAsVote(state, kvs, e, interaction)
+			if err != nil {
+				log.Printf("[%s] error while trying to handle an interaction as a vote: %s\n", e.GuildID, err)
+				return
 			}
-			if err := state.RespondInteraction(e.ID, e.Token, ResponseEphemeral("You voted "+string(command.ID()))); err != nil {
-				log.Println("Failed to send component interaction ephemeral response:", err)
+			if isVote {
+				if response != "" {
+					if err := state.RespondInteraction(e.ID, e.Token, ResponseEphemeral(response)); err != nil {
+						log.Printf("[%s] Failed to send component interaction ephemeral response: %s\n", e.GuildID, err)
+					}
+				}
+				return
 			}
 		default:
-			log.Printf("Unhandled interaction type %T", e.Data)
+			log.Printf("Unhandled interaction type %T\n", e.Data)
 			return
 		}
 	})

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"komainu/storage"
 	"log"
 	"time"
@@ -28,49 +29,46 @@ func CommandVote(state *state.State, kvs storage.KeyValueStore, event *gateway.I
 	future := now + int64(hours*float64(3600))
 
 	vote := storage.Vote{
-		StartTime:    now,
-		EndTime:      future,
-		GuildID:      event.GuildID,
-		MessageID:    discord.NullMessageID, // This is added in the MessageID callback later.
-		Question:     command.Options[1].String(),
-		Option1:      command.Options[2].String(),
-		Option2:      command.Options[3].String(),
-		Option1Votes: []discord.UserID{},
-		Option2Votes: []discord.UserID{},
-		Option3Votes: []discord.UserID{},
-		Option4Votes: []discord.UserID{},
+		StartTime: now,
+		EndTime:   future,
+		GuildID:   event.GuildID,
+		MessageID: discord.NullMessageID, // This is added in the MessageID callback later.
+		ChannelID: discord.NullChannelID, // This one, too!
+		Question:  command.Options[1].String(),
+		Options:   map[string]string{},
+		Votes:     map[discord.UserID]string{},
 	}
-
-	if len(command.Options) > 4 {
-		vote.Option3 = command.Options[4].String()
+	options := command.Options[2:len(command.Options)]
+	for idx, val := range options {
+		label := val.String()
+		if len(label) > 80 {
+			return CommandResponse{ResponseEphemeral("Sorry, the options can't be longer than 80 characters!"), nil}
+		}
+		vote.Options[fmt.Sprintf("voteOption%d", idx)] = val.String()
 	}
-	if len(command.Options) == 6 {
-		vote.Option4 = command.Options[5].String()
-	}
-	buttons := makeButtons(command.Options[2:len(command.Options)])
+	buttons := makeButtons(options)
 
 	return CommandResponse{
 		api.InteractionResponse{
 			Type: api.MessageInteractionWithSource,
 			Data: &api.InteractionResponseData{
-				Content:    option.NewNullableString(vote.Question),
+				Content:    option.NewNullableString(vote.String()),
 				Components: discord.ComponentsPtr(buttons),
 			},
-		}, func(mi discord.MessageID) {
-			vote.MessageID = mi
-			// vote.Store(kvs)
+		}, func(message *discord.Message) {
+			vote.MessageID = message.ID
+			vote.ChannelID = message.ChannelID
+			vote.Store(kvs)
 		},
 	}
 }
-
-var optionCustomIDs = []string{"first", "second", "third", "fourth", "broken"}
 
 func makeButtons(options []discord.CommandInteractionOption) discord.Component {
 	buttons := make([]discord.InteractiveComponent, len(options))
 	for idx, option := range options {
 		buttons[idx] = &discord.ButtonComponent{
 			Style:    discord.PrimaryButtonStyle(),
-			CustomID: discord.ComponentID(optionCustomIDs[idx]),
+			CustomID: discord.ComponentID(fmt.Sprintf("voteOption%d", idx)),
 			Label:    option.String(),
 		}
 	}

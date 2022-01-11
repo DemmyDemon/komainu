@@ -36,6 +36,7 @@ func Connect(cfg *storage.Configuration, kvs storage.KeyValueStore) *state.State
 		log.Printf("Reaction in %d: %d reacted to message %s in %s with %s", e.GuildID, e.UserID, e.MessageID, e.ChannelID, e.Emoji)
 	})
 
+	commands.AddDeleteHandler(state, kvs)
 	commands.AddCommandHandler(state, kvs)
 
 	state.AddHandler(func(e *gateway.GuildCreateEvent) {
@@ -64,6 +65,8 @@ func Connect(cfg *storage.Configuration, kvs storage.KeyValueStore) *state.State
 		log.Fatalln("Failed to get myself:", err)
 	}
 	log.Printf("Connected to Discord as %s#%s\n", user.Username, user.Discriminator)
+
+	go storage.StartClosingExpiredVotes(state, kvs)
 
 	return state
 }
