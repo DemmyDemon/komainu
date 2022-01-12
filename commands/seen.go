@@ -61,7 +61,7 @@ func CommandInactive(state *state.State, kvs storage.KeyValueStore, event *gatew
 		return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
 	}
 
-	never := []discord.UserID{}
+	never := 0
 	var sb strings.Builder
 
 	inactiveCount := 0
@@ -72,18 +72,15 @@ func CommandInactive(state *state.State, kvs storage.KeyValueStore, event *gatew
 			log.Printf("[%s] Failed to get a storage.LastSeen for %s: %s", event.GuildID, member.User.ID, err)
 			return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
 		} else if !seen {
-			never = append(never, member.User.ID)
+			never++
 		} else if when <= atLeast {
 			fmt.Fprintf(&sb, "<@%d> <t:%d:R>\n", member.User.ID, when)
 			inactiveCount++
 		}
 	}
-	fmt.Fprintf(&sb, "%d inactive in the last %d days, out of %d members.\n", inactiveCount+len(never), days, len(members))
-	if len(never) > 0 {
-		fmt.Fprint(&sb, "Never seen active by me: ")
-		for _, userID := range never {
-			fmt.Fprintf(&sb, "<@%d> ", userID)
-		}
+	fmt.Fprintf(&sb, "%d inactive in the last %d days, out of %d members.\n", inactiveCount+never, days, len(members))
+	if never > 0 {
+		fmt.Fprintf(&sb, "(Including %d that I have never seen say anything!)", never)
 	}
 	return CommandResponse{ResponseMessageNoMention(sb.String()), nil}
 }
