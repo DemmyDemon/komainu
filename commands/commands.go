@@ -81,6 +81,7 @@ var commands = map[string]Command{
 			Required:    true,
 		},
 	}},
+	"neverseen": {"seen", "Get a list of people that the bot has never seen say anything!", CommandNeverSeen, []discord.CommandOption{}},
 	"inactive": {"seen", "Get a list of inactive people", CommandInactive, []discord.CommandOption{
 		&discord.IntegerOption{
 			OptionName:  "days",

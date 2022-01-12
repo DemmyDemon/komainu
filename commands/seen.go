@@ -84,3 +84,32 @@ func CommandInactive(state *state.State, kvs storage.KeyValueStore, event *gatew
 	}
 	return CommandResponse{ResponseMessageNoMention(sb.String()), nil}
 }
+
+// CommandNeverSeen processes a command to list everyone that has never been seen by the bot.
+func CommandNeverSeen(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
+	members, err := state.Session.Members(event.GuildID, 0)
+	if err != nil {
+		log.Printf("[%s] Failed to get member list for /neverseen lookup: %s", event.GuildID, err)
+		return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
+	}
+	count := 0
+
+	var sb strings.Builder
+	for _, member := range members {
+		seen, _, err := storage.LastSeen(kvs, event.GuildID, member.User.ID)
+		if err != nil {
+			log.Printf("[%s] Failed to get a storage.LastSeen for %s: %s", event.GuildID, member.User.ID, err)
+			return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
+		}
+		if !seen {
+			count++
+			fmt.Fprintf(&sb, "<@%d> ", member.User.ID)
+		}
+	}
+	if count > 0 {
+		fmt.Fprintf(&sb, "\n%d users have never been seen by me.", count)
+	} else {
+		fmt.Fprintf(&sb, "Everyone seems to have at least said at least *something!*")
+	}
+	return CommandResponse{ResponseMessageNoMention(sb.String()), nil}
+}
