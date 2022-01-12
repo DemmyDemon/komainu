@@ -13,6 +13,51 @@ import (
 	"github.com/diamondburned/arikawa/v3/state"
 )
 
+var CommandAccessObject Command = Command{
+	group:       "access",
+	description: "Grant, revoke and list command group access",
+	code:        CommandAccess,
+	options: []discord.CommandOption{
+		&discord.SubcommandOption{
+			OptionName:  "grant",
+			Description: "Grant a role access to something",
+			Options: []discord.CommandOptionValue{
+				&discord.StringOption{
+					OptionName:  "group",
+					Description: "The command group to grant access to",
+					Required:    true,
+				},
+				&discord.RoleOption{
+					OptionName:  "role",
+					Description: "The role that gets this access",
+					Required:    true,
+				},
+			},
+		},
+		&discord.SubcommandOption{
+			OptionName:  "revoke",
+			Description: "Revoke access to something from a role",
+			Options: []discord.CommandOptionValue{
+				&discord.StringOption{
+					OptionName:  "group",
+					Description: "The command group to revoke access from",
+					Required:    true,
+				},
+				&discord.RoleOption{
+					OptionName:  "role",
+					Description: "The role that loses this access",
+					Required:    true,
+				},
+			},
+		},
+		&discord.SubcommandOption{
+			OptionName:  "list",
+			Description: "List what roles have access to what command groups",
+			Options:     []discord.CommandOptionValue{},
+		},
+	},
+}
+
 // CommandAccess processes a command to list access entries.
 func CommandAccess(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
 	if command.Options == nil || len(command.Options) != 1 {

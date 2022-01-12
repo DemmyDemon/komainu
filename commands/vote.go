@@ -13,6 +13,46 @@ import (
 	"github.com/diamondburned/arikawa/v3/utils/json/option"
 )
 
+var VoteCommandObject = Command{
+	group:       "vote",
+	description: "Initiate a vote",
+	code:        CommandVote,
+	options: []discord.CommandOption{
+		&discord.NumberOption{
+			OptionName:  "length",
+			Description: "The number of hours the vote should run.",
+			Required:    true,
+			Min:         option.NewFloat(0),
+			Max:         option.NewFloat(336), // 336 hours is two weeks.
+		},
+		&discord.StringOption{
+			OptionName:  "question",
+			Description: "The question being asked. Works best as a yes/no question.",
+			Required:    true,
+		},
+		&discord.StringOption{
+			OptionName:  "first",
+			Description: "The first vote option description (80 char max)",
+			Required:    true,
+		},
+		&discord.StringOption{
+			OptionName:  "second",
+			Description: "The second vote option description (80 char max)",
+			Required:    true,
+		},
+		&discord.StringOption{
+			OptionName:  "third",
+			Description: "The third vote option description (80 char max)",
+			Required:    false,
+		},
+		&discord.StringOption{
+			OptionName:  "fourth",
+			Description: "The fourth vote option description (80 char max)",
+			Required:    false,
+		},
+	},
+}
+
 // CommandVote processes a command to start a vote
 func CommandVote(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
 	if command.Options == nil || len(command.Options) < 4 {

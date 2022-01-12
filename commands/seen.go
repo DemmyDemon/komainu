@@ -12,6 +12,38 @@ import (
 	"github.com/diamondburned/arikawa/v3/state"
 )
 
+var CommandSeenObject Command = Command{
+	group:       "seen",
+	description: "Check when someone was last around",
+	code:        CommandSeen,
+	options: []discord.CommandOption{
+		&discord.UserOption{
+			OptionName:  "user",
+			Description: "The user to look up",
+			Required:    true,
+		},
+	},
+}
+var CommandNeverSeenObject Command = Command{
+	group:       "seen",
+	description: "Get a list of people that the bot has never seen say anything!",
+	code:        CommandNeverSeen,
+	options:     []discord.CommandOption{},
+}
+
+var CommandInactiveObject Command = Command{
+	group:       "seen",
+	description: "Get a list of inactive people",
+	code:        CommandInactive,
+	options: []discord.CommandOption{
+		&discord.IntegerOption{
+			OptionName:  "days",
+			Description: "How many days of quiet makes someone inactive?",
+			Required:    true,
+		},
+	},
+}
+
 // CommandSeen processes a command to look up when a user was last seen.
 func CommandSeen(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
 	if command.Options != nil && len(command.Options) > 0 {

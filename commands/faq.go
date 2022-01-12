@@ -14,6 +14,59 @@ import (
 	"github.com/diamondburned/arikawa/v3/state"
 )
 
+var CommandFaqObject Command = Command{
+	group:       "faquser",
+	description: "Look up a FAQ topic",
+	code:        CommandFaq,
+	options: []discord.CommandOption{
+		&discord.StringOption{
+			OptionName:  "topic",
+			Description: "The name of the topic you wish to recall",
+			Required:    true,
+		},
+	},
+}
+
+var CommandFaqSetObject Command = Command{
+	group:       "faqadmin",
+	description: "Manage FAQ topics",
+	code:        CommandFaqSet,
+	options: []discord.CommandOption{
+		&discord.SubcommandOption{
+			OptionName:  "add",
+			Description: "Add a topic to the FAQ",
+			Options: []discord.CommandOptionValue{
+				&discord.StringOption{
+					OptionName:  "topic",
+					Description: "The word used to recall this item later",
+					Required:    true,
+				},
+				&discord.StringOption{
+					OptionName:  "content",
+					Description: "What you want the topic to contain",
+					Required:    true,
+				},
+			},
+		},
+		&discord.SubcommandOption{
+			OptionName:  "remove",
+			Description: "Remove a topic from the FAQ",
+			Options: []discord.CommandOptionValue{
+				&discord.StringOption{
+					OptionName:  "topic",
+					Description: "What do you want to permanently obliterate from the FAQ?",
+					Required:    true,
+				},
+			},
+		},
+		&discord.SubcommandOption{
+			OptionName:  "list",
+			Description: "List the known topics in the FAQ",
+			Options:     []discord.CommandOptionValue{},
+		},
+	},
+}
+
 // CommandFaq processes a command to retrieve a FAQ item.
 func CommandFaq(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
 	if command.Options == nil || len(command.Options) != 1 {
