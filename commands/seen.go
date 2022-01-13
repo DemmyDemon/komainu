@@ -10,6 +10,7 @@ import (
 	"github.com/diamondburned/arikawa/v3/discord"
 	"github.com/diamondburned/arikawa/v3/gateway"
 	"github.com/diamondburned/arikawa/v3/state"
+	"github.com/diamondburned/arikawa/v3/utils/json/option"
 )
 
 var CommandSeenObject Command = Command{
@@ -42,6 +43,33 @@ var CommandInactiveObject Command = Command{
 			Required:    true,
 		},
 	},
+}
+
+var CommandActiveRoleObject Command = Command{
+	group:       "seen",
+	description: "Set what role is granted and revoked for active/inactive users, and under what conditions.",
+	code:        CommandActiveRole,
+	options: []discord.CommandOption{
+		&discord.RoleOption{
+			OptionName:  "role",
+			Description: "The role to giveth and taketh away.",
+			Required:    false,
+		},
+		&discord.NumberOption{
+			OptionName:  "days",
+			Description: "How many days someone needs to be inactive to lose the role. Set to zero to disable this function.",
+			Required:    false,
+			Min:         option.NewFloat(0),
+			Max:         option.NewFloat(365),
+		},
+	},
+}
+
+var CommandSeeEveryoneObject Command = Command{
+	group:       "seen",
+	description: "Ruin the /seen system by marking everyone here as seen right now.",
+	code:        CommandSeeEveryone,
+	options:     []discord.CommandOption{},
 }
 
 // CommandSeen processes a command to look up when a user was last seen.
@@ -144,4 +172,24 @@ func CommandNeverSeen(state *state.State, kvs storage.KeyValueStore, event *gate
 		fmt.Fprintf(&sb, "Everyone seems to have at least said at least *something!*")
 	}
 	return CommandResponse{ResponseMessageNoMention(sb.String()), nil}
+}
+
+func CommandActiveRole(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
+	return CommandResponse{ResponseEphemeral("Not implemented"), nil}
+}
+
+func CommandSeeEveryone(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
+	members, err := state.Session.Members(event.GuildID, 0)
+	if err != nil {
+		log.Printf("[%s] Failed to get member list for /SeeEveryone: %s", event.GuildID, err)
+		return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
+	}
+	for _, member := range members {
+		err := storage.See(kvs, event.GuildID, member.User.ID)
+		if err != nil {
+			log.Printf("[%s] Failed to See member during seeing spree: %s", event.GuildID, err)
+			return CommandResponse{ResponseMessage("Okay, something weird happened partway through that. It was logged."), nil}
+		}
+	}
+	return CommandResponse{ResponseMessage("Eeeeeveryone was marked as being seen just now."), nil}
 }

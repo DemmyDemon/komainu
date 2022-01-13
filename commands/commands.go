@@ -34,13 +34,15 @@ type Command struct {
 }
 
 var commands = map[string]Command{
-	"access":    CommandAccessObject,
-	"seen":      CommandSeenObject,
-	"neverseen": CommandNeverSeenObject,
-	"inactive":  CommandInactiveObject,
-	"faq":       CommandFaqObject,
-	"faqset":    CommandFaqSetObject,
-	"vote":      VoteCommandObject,
+	"access":      CommandAccessObject,
+	"seen":        CommandSeenObject,
+	"neverseen":   CommandNeverSeenObject,
+	"inactive":    CommandInactiveObject,
+	"activerole":  CommandActiveRoleObject,
+	"seeeveryone": CommandSeeEveryoneObject,
+	"faq":         CommandFaqObject,
+	"faqset":      CommandFaqSetObject,
+	"vote":        CommandVoteObject,
 }
 
 // *Another* global, to avoid an initalization cycle :-/
