@@ -53,12 +53,12 @@ var CommandActiveRoleObject Command = Command{
 		&discord.RoleOption{
 			OptionName:  "role",
 			Description: "The role to giveth and taketh away.",
-			Required:    false,
+			Required:    true,
 		},
 		&discord.NumberOption{
 			OptionName:  "days",
 			Description: "How many days someone needs to be inactive to lose the role. Set to zero to disable this function.",
-			Required:    false,
+			Required:    true,
 			Min:         option.NewFloat(0),
 			Max:         option.NewFloat(365),
 		},
@@ -175,7 +175,46 @@ func CommandNeverSeen(state *state.State, kvs storage.KeyValueStore, event *gate
 }
 
 func CommandActiveRole(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
-	return CommandResponse{ResponseEphemeral("Not implemented"), nil}
+	if command.Options == nil || len(command.Options) != 2 {
+		log.Printf("[%s] /activerole has a weird number of arguments\n", event.GuildID)
+		return CommandResponse{ResponseEphemeral("Wait, what? Something odd happened, and was logged."), nil}
+	}
+
+	// Processing these in reverse order because of the Special Meaning of days == 0
+	days, err := command.Options[1].IntValue()
+	if err != nil {
+		log.Printf("[%s] Error encountered trying to turn days argument into an actual int64 in /activerole: %s\n", event.GuildID, err)
+		return CommandResponse{ResponseEphemeral("That's very odd. I've logged that it didn't go according to plan."), nil}
+	}
+
+	if days == 0 {
+		if _, err := kvs.Delete(event.GuildID, "activerole", "days"); err != nil {
+			log.Printf("[%s] Tried to disable activerole, but %s", event.GuildID, err)
+		}
+		if _, err := kvs.Delete(event.GuildID, "activerole", "role"); err != nil {
+			log.Printf("[%s] Tried to disable activerole, however %s", event.GuildID, err)
+		}
+		return CommandResponse{ResponseMessage("So noted. Feature disabled."), nil}
+	}
+
+	if err := kvs.Set(event.GuildID, "activerole", "days", days); err != nil {
+		log.Printf("[%s] Error storing the days for /activerole: %s\n", event.GuildID, err)
+		return CommandResponse{ResponseEphemeral("There is something strange in this neighbourhood. I've logged it for the Bug Busters to investigate later."), nil}
+	}
+
+	snowflake, err := command.Options[0].SnowflakeValue()
+	if err != nil {
+		log.Printf("[%s] Error encountered trying to turn role argument into an actual snowflake in /activerole: %s\n", event.GuildID, err)
+		return CommandResponse{ResponseEphemeral("That's very odd. I've logged that it didn't go as planned."), nil}
+	}
+	roleID := discord.RoleID(snowflake)
+	if err := kvs.Set(event.GuildID, "activerole", "role", roleID); err != nil {
+		log.Printf("[%s] Error storing the role for /activerole: %s\n", event.GuildID, err)
+		return CommandResponse{ResponseEphemeral("There is something strange in this neighbourhood. I've logged it for the Bug Busters to look at later."), nil}
+	}
+
+	return CommandResponse{ResponseMessageNoMention(fmt.Sprintf("Okay, will revoke <@&%d> after %d days, and grant it to anyone that says anything.", roleID, days)), nil}
+
 }
 
 func CommandSeeEveryone(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
