@@ -174,6 +174,7 @@ func CommandNeverSeen(state *state.State, kvs storage.KeyValueStore, event *gate
 	return CommandResponse{ResponseMessageNoMention(sb.String()), nil}
 }
 
+// CommandActiveRole processes a command to set an automatic "active" role and revoke it after a certain amount of days.
 func CommandActiveRole(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
 	if command.Options == nil || len(command.Options) != 2 {
 		log.Printf("[%s] /activerole has a weird number of arguments\n", event.GuildID)
@@ -217,6 +218,7 @@ func CommandActiveRole(state *state.State, kvs storage.KeyValueStore, event *gat
 
 }
 
+// CommandSeeEveryone processes a command to mark eeeeveryone in the guild as "seen" right now.
 func CommandSeeEveryone(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
 	members, err := state.Session.Members(event.GuildID, 0)
 	if err != nil {
