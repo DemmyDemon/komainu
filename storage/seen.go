@@ -26,6 +26,9 @@ func MaybeGiveActiveRole(kvs KeyValueStore, state *state.State, guildID discord.
 	if member == nil {
 		return nil
 	}
+	if member.User.Bot {
+		return nil // Bots aren't "active" as such.
+	}
 
 	role := discord.NullRoleID
 	exist, err := kvs.GetObject(guildID, "activerole", "role", &role)
