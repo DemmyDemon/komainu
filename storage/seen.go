@@ -22,6 +22,11 @@ func LastSeen(kvs KeyValueStore, guildID discord.GuildID, userID discord.UserID)
 }
 
 func MaybeGiveActiveRole(kvs KeyValueStore, state *state.State, guildID discord.GuildID, member *discord.Member) (err error) {
+
+	if member == nil {
+		return nil
+	}
+
 	role := discord.NullRoleID
 	exist, err := kvs.GetObject(guildID, "activerole", "role", &role)
 	if err != nil {
