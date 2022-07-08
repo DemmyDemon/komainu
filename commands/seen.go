@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"komainu/storage"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/diamondburned/arikawa/v3/discord"
@@ -169,7 +168,7 @@ func CommandNeverSeen(state *state.State, kvs storage.KeyValueStore, event *gate
 	}
 	count := 0
 
-	var sb strings.Builder
+	var bt bytes.Buffer
 	for _, member := range members {
 		seen, _, err := storage.LastSeen(kvs, event.GuildID, member.User.ID)
 		if err != nil {
@@ -178,15 +177,23 @@ func CommandNeverSeen(state *state.State, kvs storage.KeyValueStore, event *gate
 		}
 		if !seen {
 			count++
-			fmt.Fprintf(&sb, "<@%d> ", member.User.ID)
+			if member.Nick != "" {
+				fmt.Fprintf(&bt, "<%s#%s> (%s)\n", member.User.Username, member.User.Discriminator, member.Nick)
+			} else {
+				fmt.Fprintf(&bt, "<%s#%s>\n", member.User.Username, member.User.Discriminator)
+			}
 		}
 	}
+
 	if count > 0 {
-		fmt.Fprintf(&sb, "\n%d users have never been seen by me.", count)
+		return CommandResponse{ResponseMessageAttachText(
+			fmt.Sprintf("%d users have never been seen by me.", count),
+			fmt.Sprintf("never_seen_report_%s.txt", time.Now().Format("2006-01-02")),
+			&bt,
+		), nil}
 	} else {
-		fmt.Fprintf(&sb, "Everyone seems to have at least said at least *something!*")
+		return CommandResponse{ResponseMessage("Everyone seems to have at least said at least *something!*"), nil}
 	}
-	return CommandResponse{ResponseMessageNoMention(sb.String()), nil}
 }
 
 // CommandActiveRole processes a command to set an automatic "active" role and revoke it after a certain amount of days.
