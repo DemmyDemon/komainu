@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bytes"
 	"fmt"
 	"komainu/storage"
 	"log"
@@ -121,9 +122,8 @@ func CommandInactive(state *state.State, kvs storage.KeyValueStore, event *gatew
 		return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
 	}
 
+	var bt bytes.Buffer
 	never := 0
-	var sb strings.Builder
-
 	inactiveCount := 0
 
 	now := time.Now()
@@ -139,23 +139,24 @@ func CommandInactive(state *state.State, kvs storage.KeyValueStore, event *gatew
 			then := time.Unix(when, 0)
 			timeDiff := now.Sub(then)
 			if member.Nick != "" {
-				fmt.Fprintf(&sb, "<%s#%s> (%s) %d days\n", member.User.Username, member.User.Discriminator, member.Nick, int(timeDiff.Hours()/24))
+				fmt.Fprintf(&bt, "<%s#%s> (%s) %d days\n", member.User.Username, member.User.Discriminator, member.Nick, int(timeDiff.Hours()/24))
 			} else {
-				fmt.Fprintf(&sb, "<%s#%s> %d days\n", member.User.Username, member.User.Discriminator, int(timeDiff.Hours()/24))
+				fmt.Fprintf(&bt, "<%s#%s> %d days\n", member.User.Username, member.User.Discriminator, int(timeDiff.Hours()/24))
 			}
-			// fmt.Fprintf(&sb, "<@%d> <t:%d:R>\n", member.User.ID, when)
 			inactiveCount++
 		}
 	}
-	// fmt.Fprintf(&sb, "%d inactive in the last %d days, out of %d members.\n", inactiveCount+never, days, len(members))
+
+	message := fmt.Sprintf("%d inactive in the last %d days, out of %d members.", inactiveCount+never, days, len(members))
 	if never > 0 {
-		fmt.Fprintf(&sb, "(Including %d that I have never seen say anything!)", never)
+		message += fmt.Sprintf("(Including %d that I have never seen say anything!)", never)
 	}
-	//return CommandResponse{ResponseMessageNoMention(sb.String()), nil}
+	message += "\n"
+
 	return CommandResponse{ResponseMessageAttachText(
-		fmt.Sprintf("%d inactive in the last %d days, out of %d members.\n", inactiveCount+never, days, len(members)),
+		message,
 		fmt.Sprintf("inactive_report_%s.txt", time.Now().Format("2006-01-02")),
-		strings.NewReader(sb.String()),
+		&bt,
 	), nil}
 }
 

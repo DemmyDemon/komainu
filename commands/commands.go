@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"io"
 	"komainu/storage"
 	"komainu/utility"
 	"log"
@@ -273,7 +274,7 @@ func ResponseMessageNoMention(message ...string) api.InteractionResponse {
 	}
 }
 
-func ResponseMessageAttachText(message string, name string, text *strings.Reader) api.InteractionResponse {
+func ResponseMessageAttachText(message string, name string, text io.Reader) api.InteractionResponse {
 	return api.InteractionResponse{
 		Type: api.MessageInteractionWithSource,
 		Data: &api.InteractionResponseData{
