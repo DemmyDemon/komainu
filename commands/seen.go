@@ -128,12 +128,22 @@ func CommandInactive(state *state.State, kvs storage.KeyValueStore, event *gatew
 	now := time.Now()
 
 	for _, member := range members {
+
+		if member.User.Bot {
+			continue
+		}
+
 		seen, when, err := storage.LastSeen(kvs, event.GuildID, member.User.ID)
 		if err != nil {
 			log.Printf("[%s] Failed to get a storage.LastSeen for %s: %s", event.GuildID, member.User.ID, err)
 			return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
 		} else if !seen {
 			never++
+			if member.Nick != "" {
+				fmt.Fprintf(&bt, "<%s#%s> (%s) never\n", member.User.Username, member.User.Discriminator, member.Nick)
+			} else {
+				fmt.Fprintf(&bt, "<%s#%s> never\n", member.User.Username, member.User.Discriminator)
+			}
 		} else if when <= atLeast {
 			then := time.Unix(when, 0)
 			timeDiff := now.Sub(then)
@@ -170,6 +180,11 @@ func CommandNeverSeen(state *state.State, kvs storage.KeyValueStore, event *gate
 
 	var bt bytes.Buffer
 	for _, member := range members {
+
+		if member.User.Bot {
+			continue
+		}
+
 		seen, _, err := storage.LastSeen(kvs, event.GuildID, member.User.ID)
 		if err != nil {
 			log.Printf("[%s] Failed to get a storage.LastSeen for %s: %s", event.GuildID, member.User.ID, err)
@@ -178,9 +193,9 @@ func CommandNeverSeen(state *state.State, kvs storage.KeyValueStore, event *gate
 		if !seen {
 			count++
 			if member.Nick != "" {
-				fmt.Fprintf(&bt, "<%s#%s> (%s)\n", member.User.Username, member.User.Discriminator, member.Nick)
+				fmt.Fprintf(&bt, "%s#%s (%s) joined %s\n", member.User.Username, member.User.Discriminator, member.Nick, member.Joined.Format("2006-01-02"))
 			} else {
-				fmt.Fprintf(&bt, "<%s#%s>\n", member.User.Username, member.User.Discriminator)
+				fmt.Fprintf(&bt, "%s#%s joined %s\n", member.User.Username, member.User.Discriminator, member.Joined.Format("2006-01-02"))
 			}
 		}
 	}
