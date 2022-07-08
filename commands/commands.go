@@ -12,6 +12,7 @@ import (
 	"github.com/diamondburned/arikawa/v3/gateway"
 	"github.com/diamondburned/arikawa/v3/state"
 	"github.com/diamondburned/arikawa/v3/utils/json/option"
+	"github.com/diamondburned/arikawa/v3/utils/sendpart"
 )
 
 type CommandFunction func(
@@ -24,6 +25,20 @@ type CommandFunction func(
 type CommandResponse struct {
 	InteractionResponse api.InteractionResponse
 	Callback            func(message *discord.Message)
+}
+
+// IsEphemeral checks if the contained InteractionResponse is only shown to the user initiating the interaction.
+func (cr *CommandResponse) IsEphemeral() bool {
+	return cr.InteractionResponse.Data.Flags&api.EphemeralResponse != 0
+}
+
+// Length returns the number of runes in the content string. This is not the same as the number of bytes!
+func (cr *CommandResponse) Length() int {
+	if cr.InteractionResponse.Data.Content == nil {
+		return 0
+	}
+	runes := []rune(cr.InteractionResponse.Data.Content.Val)
+	return len(runes)
 }
 
 type Command struct {
@@ -146,6 +161,12 @@ func AddCommandHandler(state *state.State, kvs storage.KeyValueStore) {
 
 				response := val.code(state, kvs, e, interaction)
 
+				if response.Length() > 1500 {
+					if response.IsEphemeral() {
+						response.InteractionResponse.Data.Content = option.NewNullableString(response.InteractionResponse.Data.Content.Val)
+					}
+				}
+
 				if err := state.RespondInteraction(e.ID, e.Token, response.InteractionResponse); err != nil {
 					log.Println("Failed to send interaction response:", err)
 				}
@@ -247,6 +268,21 @@ func ResponseMessageNoMention(message ...string) api.InteractionResponse {
 			Content: option.NewNullableString(strings.Join(message, " ")),
 			AllowedMentions: &api.AllowedMentions{
 				Parse: []api.AllowedMentionType{},
+			},
+		},
+	}
+}
+
+func ResponseMessageAttachText(message string, name string, text *strings.Reader) api.InteractionResponse {
+	return api.InteractionResponse{
+		Type: api.MessageInteractionWithSource,
+		Data: &api.InteractionResponseData{
+			Content: option.NewNullableString(message),
+			Files: []sendpart.File{
+				{
+					Name:   name,
+					Reader: text,
+				},
 			},
 		},
 	}

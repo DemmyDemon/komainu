@@ -110,7 +110,7 @@ func CommandInactive(state *state.State, kvs storage.KeyValueStore, event *gatew
 			return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
 		}
 		if d <= 0 {
-			return CommandResponse{ResponseEphemeral(fmt.Sprintf("Everyone. Everyone has been inactive for %d days.", d)), nil}
+			return CommandResponse{ResponseEphemeral(fmt.Sprintf("Everyone. Everyone has been inactive for at least %d days.", d)), nil}
 		}
 		days = d
 	}
@@ -126,6 +126,8 @@ func CommandInactive(state *state.State, kvs storage.KeyValueStore, event *gatew
 
 	inactiveCount := 0
 
+	now := time.Now()
+
 	for _, member := range members {
 		seen, when, err := storage.LastSeen(kvs, event.GuildID, member.User.ID)
 		if err != nil {
@@ -134,15 +136,27 @@ func CommandInactive(state *state.State, kvs storage.KeyValueStore, event *gatew
 		} else if !seen {
 			never++
 		} else if when <= atLeast {
-			fmt.Fprintf(&sb, "<@%d> <t:%d:R>\n", member.User.ID, when)
+			then := time.Unix(when, 0)
+			timeDiff := now.Sub(then)
+			if member.Nick != "" {
+				fmt.Fprintf(&sb, "<%s#%s> (%s) %d days\n", member.User.Username, member.User.Discriminator, member.Nick, int(timeDiff.Hours()/24))
+			} else {
+				fmt.Fprintf(&sb, "<%s#%s> %d days\n", member.User.Username, member.User.Discriminator, int(timeDiff.Hours()/24))
+			}
+			// fmt.Fprintf(&sb, "<@%d> <t:%d:R>\n", member.User.ID, when)
 			inactiveCount++
 		}
 	}
-	fmt.Fprintf(&sb, "%d inactive in the last %d days, out of %d members.\n", inactiveCount+never, days, len(members))
+	// fmt.Fprintf(&sb, "%d inactive in the last %d days, out of %d members.\n", inactiveCount+never, days, len(members))
 	if never > 0 {
 		fmt.Fprintf(&sb, "(Including %d that I have never seen say anything!)", never)
 	}
-	return CommandResponse{ResponseMessageNoMention(sb.String()), nil}
+	//return CommandResponse{ResponseMessageNoMention(sb.String()), nil}
+	return CommandResponse{ResponseMessageAttachText(
+		fmt.Sprintf("%d inactive in the last %d days, out of %d members.\n", inactiveCount+never, days, len(members)),
+		fmt.Sprintf("inactive_report_%s.txt", time.Now().Format("2006-01-02")),
+		strings.NewReader(sb.String()),
+	), nil}
 }
 
 // CommandNeverSeen processes a command to list everyone that has never been seen by the bot.
