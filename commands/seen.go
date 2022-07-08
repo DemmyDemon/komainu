@@ -149,7 +149,7 @@ func CommandInactive(state *state.State, kvs storage.KeyValueStore, event *gatew
 
 	message := fmt.Sprintf("%d inactive in the last %d days, out of %d members.", inactiveCount+never, days, len(members))
 	if never > 0 {
-		message += fmt.Sprintf("(Including %d that I have never seen say anything!)", never)
+		message += fmt.Sprintf(" (Including %d that I have never seen say anything!)", never)
 	}
 	message += "\n"
 
