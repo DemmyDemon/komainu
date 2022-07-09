@@ -139,10 +139,14 @@ func CommandInactive(state *state.State, kvs storage.KeyValueStore, event *gatew
 			return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
 		} else if !seen {
 			never++
+			joinTime := member.Joined.Format("2006-01-02")
+			if now.Sub(member.Joined.Time()).Hours() < 24 {
+				joinTime = "very recently"
+			}
 			if member.Nick != "" {
-				fmt.Fprintf(&bt, "<%s#%s> (%s) never\n", member.User.Username, member.User.Discriminator, member.Nick)
+				fmt.Fprintf(&bt, "<%s#%s> (%s) never, joined %s\n", member.User.Username, member.User.Discriminator, member.Nick, joinTime)
 			} else {
-				fmt.Fprintf(&bt, "<%s#%s> never\n", member.User.Username, member.User.Discriminator)
+				fmt.Fprintf(&bt, "<%s#%s> never, joined %s\n", member.User.Username, member.User.Discriminator, joinTime)
 			}
 		} else if when <= atLeast {
 			then := time.Unix(when, 0)
@@ -162,11 +166,15 @@ func CommandInactive(state *state.State, kvs storage.KeyValueStore, event *gatew
 	}
 	message += "\n"
 
-	return CommandResponse{ResponseMessageAttachText(
-		message,
-		fmt.Sprintf("inactive_report_%s.txt", time.Now().Format("2006-01-02")),
-		&bt,
-	), nil}
+	if inactiveCount+never > 0 {
+		return CommandResponse{ResponseMessageAttachText(
+			message,
+			fmt.Sprintf("inactive_report_%s.txt", time.Now().Format("2006-01-02")),
+			&bt,
+		), nil}
+	} else {
+		return CommandResponse{ResponseMessage(message), nil}
+	}
 }
 
 // CommandNeverSeen processes a command to list everyone that has never been seen by the bot.
