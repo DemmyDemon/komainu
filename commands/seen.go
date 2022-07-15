@@ -13,63 +13,62 @@ import (
 	"github.com/diamondburned/arikawa/v3/utils/json/option"
 )
 
-var CommandSeenObject Command = Command{
-	group:       "seen",
-	description: "Check when someone was last around",
-	code:        CommandSeen,
-	options: []discord.CommandOption{
-		&discord.UserOption{
-			OptionName:  "user",
-			Description: "The user to look up",
-			Required:    true,
+func init() {
+	registerCommandObject("seen", Command{
+		group:       "seen",
+		description: "Check when someone was last around",
+		code:        CommandSeen,
+		options: []discord.CommandOption{
+			&discord.UserOption{
+				OptionName:  "user",
+				Description: "The user to look up",
+				Required:    true,
+			},
 		},
-	},
-}
-var CommandNeverSeenObject Command = Command{
-	group:       "seen",
-	description: "Get a list of people that the bot has never seen say anything!",
-	code:        CommandNeverSeen,
-	options:     []discord.CommandOption{},
-}
-
-var CommandInactiveObject Command = Command{
-	group:       "seen",
-	description: "Get a list of inactive people",
-	code:        CommandInactive,
-	options: []discord.CommandOption{
-		&discord.IntegerOption{
-			OptionName:  "days",
-			Description: "How many days of quiet makes someone inactive?",
-			Required:    true,
+	})
+	registerCommandObject("neverseen", Command{
+		group:       "seen",
+		description: "Get a list of people that the bot has never seen say anything!",
+		code:        CommandNeverSeen,
+		options:     []discord.CommandOption{},
+	})
+	registerCommandObject("inactive", Command{
+		group:       "seen",
+		description: "Get a list of inactive people",
+		code:        CommandInactive,
+		options: []discord.CommandOption{
+			&discord.IntegerOption{
+				OptionName:  "days",
+				Description: "How many days of quiet makes someone inactive?",
+				Required:    true,
+			},
 		},
-	},
-}
-
-var CommandActiveRoleObject Command = Command{
-	group:       "seen",
-	description: "Set what role is granted and revoked for active/inactive users, and under what conditions.",
-	code:        CommandActiveRole,
-	options: []discord.CommandOption{
-		&discord.RoleOption{
-			OptionName:  "role",
-			Description: "The role to giveth and taketh away.",
-			Required:    true,
+	})
+	registerCommandObject("activerole", Command{
+		group:       "seen",
+		description: "Set what role is granted and revoked for active/inactive users, and under what conditions.",
+		code:        CommandActiveRole,
+		options: []discord.CommandOption{
+			&discord.RoleOption{
+				OptionName:  "role",
+				Description: "The role to giveth and taketh away.",
+				Required:    true,
+			},
+			&discord.NumberOption{
+				OptionName:  "days",
+				Description: "How many days someone needs to be inactive to lose the role. Set to zero to disable this function.",
+				Required:    true,
+				Min:         option.NewFloat(0),
+				Max:         option.NewFloat(365),
+			},
 		},
-		&discord.NumberOption{
-			OptionName:  "days",
-			Description: "How many days someone needs to be inactive to lose the role. Set to zero to disable this function.",
-			Required:    true,
-			Min:         option.NewFloat(0),
-			Max:         option.NewFloat(365),
-		},
-	},
-}
-
-var CommandSeeEveryoneObject Command = Command{
-	group:       "seen",
-	description: "Ruin the /seen system by marking everyone here as seen right now.",
-	code:        CommandSeeEveryone,
-	options:     []discord.CommandOption{},
+	})
+	registerCommandObject("seeeveryone", Command{
+		group:       "seen",
+		description: "Ruin the /seen system by marking everyone here as seen right now.",
+		code:        CommandSeeEveryone,
+		options:     []discord.CommandOption{},
+	})
 }
 
 // CommandSeen processes a command to look up when a user was last seen.

@@ -49,17 +49,8 @@ type Command struct {
 	options     []discord.CommandOption
 }
 
-var commands = map[string]Command{
-	"access":      CommandAccessObject,
-	"seen":        CommandSeenObject,
-	"neverseen":   CommandNeverSeenObject,
-	"inactive":    CommandInactiveObject,
-	"activerole":  CommandActiveRoleObject,
-	"seeeveryone": CommandSeeEveryoneObject,
-	"faq":         CommandFaqObject,
-	"faqset":      CommandFaqSetObject,
-	"vote":        CommandVoteObject,
-}
+// commands holds the Commands to be registered with each joined guild.
+var commands = map[string]Command{}
 
 // *Another* global, to avoid an initalization cycle :-/
 // Value is defined when AddCommandHandler is called, to avoid it being cyclc.
@@ -81,6 +72,10 @@ func GetCommandGroups() []string {
 	}
 	sort.Strings(groups)
 	return groups
+}
+
+func registerCommandObject(name string, command Command) {
+	commands[name] = command
 }
 
 // HasAccess checks if the given user has access to the given command group in the given guild.
@@ -119,6 +114,7 @@ func HasAccess(kvs storage.KeyValueStore, state *state.State, guildID discord.Gu
 	return false // If all else fails, they're not authorized.
 }
 
+// AddDeleteHandler registers a handler for when messages deleted so the relevant Vote, if any, can be removed.
 func AddDeleteHandler(state *state.State, kvs storage.KeyValueStore) {
 	state.AddHandler(func(e *gateway.MessageDeleteEvent) {
 		if e.GuildID == discord.NullGuildID {
@@ -169,7 +165,7 @@ func AddCommandHandler(state *state.State, kvs storage.KeyValueStore) {
 				}
 
 				if err := state.RespondInteraction(e.ID, e.Token, response.InteractionResponse); err != nil {
-					log.Println("Failed to send interaction response:", err)
+					log.Printf("[%s] Failed to send command interaction response: %s", e.GuildID, err)
 				}
 				if response.Callback != nil {
 					message, err := state.InteractionResponse(e.AppID, e.Token)
@@ -228,9 +224,10 @@ func RegisterCommands(state *state.State, guildID discord.GuildID) {
 
 	for name, data := range commands {
 		_, err := state.CreateGuildCommand(app.ID, guildID, api.CreateCommandData{
-			Name:        name,
-			Description: data.description,
-			Options:     data.options,
+			Name:                     name,
+			Description:              data.description,
+			Options:                  data.options,
+			DefaultMemberPermissions: discord.NewPermissions(0),
 		})
 		if err != nil {
 			log.Printf("[%s] Failed to create guild command /%s: %s\n", guildID, name, err)
@@ -274,6 +271,7 @@ func ResponseMessageNoMention(message ...string) api.InteractionResponse {
 	}
 }
 
+// ResponseMessageAttachText generates an InteractionResponse from the strings given, and attaches the given file.
 func ResponseMessageAttachText(message string, name string, text io.Reader) api.InteractionResponse {
 	return api.InteractionResponse{
 		Type: api.MessageInteractionWithSource,

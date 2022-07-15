@@ -13,7 +13,11 @@ import (
 	"github.com/diamondburned/arikawa/v3/state"
 )
 
-var CommandAccessObject Command = Command{
+func init() {
+	registerCommandObject("access", commandAccessObject)
+}
+
+var commandAccessObject Command = Command{
 	group:       "access",
 	description: "Grant, revoke and list command group access",
 	code:        CommandAccess,

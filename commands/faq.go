@@ -14,7 +14,13 @@ import (
 	"github.com/diamondburned/arikawa/v3/state"
 )
 
-var CommandFaqObject Command = Command{
+func init() {
+	registerCommandObject("faq", commandFaqObject)
+	registerCommandObject("faqset", commandFaqSetObject)
+	registerModalHandlerObject("faqadd", ModalHandler{code: FAQAddModalHandler})
+}
+
+var commandFaqObject Command = Command{
 	group:       "faquser",
 	description: "Look up a FAQ topic",
 	code:        CommandFaq,
@@ -27,7 +33,7 @@ var CommandFaqObject Command = Command{
 	},
 }
 
-var CommandFaqSetObject Command = Command{
+var commandFaqSetObject Command = Command{
 	group:       "faqadmin",
 	description: "Manage FAQ topics",
 	code:        CommandFaqSet,

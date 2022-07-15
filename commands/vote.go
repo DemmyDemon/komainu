@@ -13,7 +13,11 @@ import (
 	"github.com/diamondburned/arikawa/v3/utils/json/option"
 )
 
-var CommandVoteObject = Command{
+func init() {
+	registerCommandObject("vote", commandVoteObject)
+}
+
+var commandVoteObject = Command{
 	group:       "vote",
 	description: "Initiate a vote",
 	code:        CommandVote,
