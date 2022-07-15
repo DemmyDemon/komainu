@@ -12,6 +12,7 @@ import (
 	"github.com/diamondburned/arikawa/v3/discord"
 	"github.com/diamondburned/arikawa/v3/gateway"
 	"github.com/diamondburned/arikawa/v3/state"
+	"github.com/diamondburned/arikawa/v3/utils/json/option"
 )
 
 func init() {
@@ -45,11 +46,6 @@ var commandFaqSetObject Command = Command{
 				&discord.StringOption{
 					OptionName:  "topic",
 					Description: "The word used to recall this item later",
-					Required:    true,
-				},
-				&discord.StringOption{
-					OptionName:  "content",
-					Description: "What you want the topic to contain",
 					Required:    true,
 				},
 			},
@@ -101,7 +97,7 @@ func CommandFaqSet(state *state.State, kvs storage.KeyValueStore, event *gateway
 	case "list":
 		return CommandResponse{SubCommandFaqList(kvs, event.GuildID), nil}
 	case "add":
-		return CommandResponse{SubCommandFaqAdd(kvs, event.GuildID, command.Options[0].Options), nil}
+		return CommandResponse{SubCommandFaqAdd(kvs, event.GuildID, event.SenderID(), command.Options[0].Options), nil}
 	case "remove":
 		return CommandResponse{SubCommandFaqRemove(kvs, event.GuildID, command.Options[0].Options), nil}
 	default:
@@ -110,20 +106,32 @@ func CommandFaqSet(state *state.State, kvs storage.KeyValueStore, event *gateway
 }
 
 // SubCommandFaqAdd processes a subcommand to store a FAQ item.
-func SubCommandFaqAdd(kvs storage.KeyValueStore, guildID discord.GuildID, options []discord.CommandInteractionOption) api.InteractionResponse {
-	if options == nil || len(options) != 2 {
-		log.Printf("[%s] /faqset add command structure is somehow nil or not two elements. Wat.\n", guildID)
+func SubCommandFaqAdd(kvs storage.KeyValueStore, guildID discord.GuildID, userID discord.UserID, options []discord.CommandInteractionOption) api.InteractionResponse {
+	if options == nil || len(options) != 1 {
+		log.Printf("[%s] /faqset add command structure is somehow not exactly one element. Wat.\n", guildID)
 		return ResponseEphemeral("Invalid command structure.")
 	}
 	key := strings.ToLower(options[0].String())
-	value := options[1].String()
-	err := kvs.Set(guildID, "faq", key, value)
+	_, value, err := kvs.GetString(guildID, "faq", key)
 	if err != nil {
-		log.Printf("[%s] /faqset add storage failed: %s", guildID, err)
+		log.Printf("[%s] /faqset add storage lookup failed: %s", guildID, err)
 		return ResponseEphemeral("An error occured, and has been logged.")
 	}
+	addOrUpdate := "Add FAQ item"
+	if value != "" {
+		addOrUpdate = "Update FAQ item"
+	}
 
-	return ResponseMessageNoMention(fmt.Sprintf("Learned %s: %s", key, value))
+	return ResponseModal(
+		userID, guildID, "faqadd", addOrUpdate,
+		discord.TextInputComponent{
+			CustomID:    discord.ComponentID(key),
+			Label:       key,
+			Value:       option.NewNullableString(value),
+			Style:       discord.TextInputParagraphStyle,
+			ValueLimits: [2]int{1, 1500},
+		},
+	)
 }
 
 // SubCommandFaqRemove processes a command to remove a FAQ item.
@@ -172,4 +180,19 @@ func SubCommandFaqList(kvs storage.KeyValueStore, guildID discord.GuildID) api.I
 		return ResponseMessageNoMention(sb.String())
 	}
 	return ResponseEphemeral("I'm sad to say, there are no known topics.")
+}
+
+func FAQAddModalHandler(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, interaction *discord.ModalInteraction) CommandResponse {
+	data := DecodeModalResponse(interaction.Components)
+	for key, value := range data {
+		err := kvs.Set(event.GuildID, "faq", key, value)
+		if err != nil {
+			log.Printf("[%s] Error storing FAQ item %q: %s", event.GuildID, key, err)
+			return CommandResponse{ResponseEphemeral("There was an error saving that, but it has been logged!"), nil}
+		}
+		// Early return because we only expect one, but ranging over the one is the simplest code. *shrug*
+		return CommandResponse{ResponseMessageNoMention(fmt.Sprintf("Neat! I learned all about %q", key)), nil}
+	}
+	log.Printf("[%s] There was no data when trying to sote FAQ data?!  %#v", event.GuildID, interaction.Components)
+	return CommandResponse{ResponseEphemeral("There was a weird problem, but don't worry! It has been logged for review."), nil}
 }

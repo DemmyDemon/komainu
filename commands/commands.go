@@ -192,6 +192,28 @@ func AddCommandHandler(state *state.State, kvs storage.KeyValueStore) {
 				}
 				return
 			}
+		case *discord.ModalInteraction:
+			id := string(interaction.CustomID)
+			if secret, exist := modalSecrets[id]; exist {
+				if secret.User != e.SenderID() {
+					log.Printf("[%s] Modal form submission from WRONG USER: %s, but expected %s", e.GuildID, e.SenderID(), secret.User)
+				}
+				if val, ok := modals[secret.Handler]; ok {
+					response := val.code(state, kvs, e, interaction)
+					if err := state.RespondInteraction(e.ID, e.Token, response.InteractionResponse); err != nil {
+						log.Printf("[%s] Failed to send modal interaction response: %s", e.GuildID, err)
+					}
+				} else {
+					log.Printf("[%s] has UNKNOWN modal interaction %#v", e.GuildID, secret)
+				}
+				delete(modalSecrets, id)
+			} else {
+				log.Printf("[%s] expired/invalid modal token %s used by %s\n", e.GuildID, id, e.SenderID())
+				if err := state.RespondInteraction(e.ID, e.Token, ResponseEphemeral("Sorry, access was denied. Took too long to respond?")); err != nil {
+					log.Printf("[%s] ...and there was an error telling them their token expired: %s", e.GuildID, err)
+				}
+				return
+			}
 		default:
 			log.Printf("Unhandled interaction type %T\n", e.Data)
 			return

@@ -1,11 +1,12 @@
 module komainu
 
-go 1.17
+go 1.18
 
 require (
-	github.com/diamondburned/arikawa/v3 v3.0.0-rc.4.0.20211229191059-c14e68ac7721
+	github.com/diamondburned/arikawa/v3 v3.0.0-rc.6.0.20220711094737-e1c4f0f04107
 	github.com/recoilme/sniper v0.3.0
 	go.etcd.io/bbolt v1.3.6
+	github.com/google/uuid v1.3.0
 )
 
 require (
