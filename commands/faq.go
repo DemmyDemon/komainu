@@ -125,11 +125,11 @@ func SubCommandFaqAdd(kvs storage.KeyValueStore, guildID discord.GuildID, userID
 	return ResponseModal(
 		userID, guildID, "faqadd", addOrUpdate,
 		discord.TextInputComponent{
-			CustomID:    discord.ComponentID(key),
-			Label:       key,
-			Value:       option.NewNullableString(value),
-			Style:       discord.TextInputParagraphStyle,
-			ValueLimits: [2]int{1, 1500},
+			CustomID:     discord.ComponentID(key),
+			Label:        key,
+			Value:        option.NewNullableString(value),
+			Style:        discord.TextInputParagraphStyle,
+			LengthLimits: [2]int{1, 1500},
 		},
 	)
 }

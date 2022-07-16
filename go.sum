@@ -1,7 +1,7 @@
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/diamondburned/arikawa/v3 v3.0.0-rc.6.0.20220711094737-e1c4f0f04107 h1:h5hUbyUQlfh5qyPNrQSKuiQsy4PXISibxTUM0wgNgsU=
-github.com/diamondburned/arikawa/v3 v3.0.0-rc.6.0.20220711094737-e1c4f0f04107/go.mod h1:5jBSNnp82Z/EhsKa6Wk9FsOqSxfVkNZDTDBPOj47LpY=
+github.com/diamondburned/arikawa/v3 v3.0.0-rc.6.0.20220716033638-c84e7f6712c0 h1:SOCzBfvu67yDYHX+HnQmLtLnMPveT0cTpnLaFGq4n0s=
+github.com/diamondburned/arikawa/v3 v3.0.0-rc.6.0.20220716033638-c84e7f6712c0/go.mod h1:5jBSNnp82Z/EhsKa6Wk9FsOqSxfVkNZDTDBPOj47LpY=
 github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
 github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/gorilla/schema v1.2.0 h1:YufUaxZYCKGFuAq3c96BOhjgd5nmXiOY9NGzF247Tsc=
