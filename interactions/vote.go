@@ -1,7 +1,9 @@
-package commands
+package interactions
 
 import (
 	"fmt"
+	"komainu/interactions/command"
+	"komainu/interactions/response"
 	"komainu/storage"
 	"log"
 	"time"
@@ -14,14 +16,13 @@ import (
 )
 
 func init() {
-	registerCommandObject("vote", commandVoteObject)
+	command.Register("vote", commandVoteObject)
 }
 
-var commandVoteObject = Command{
-	group:       "vote",
-	description: "Initiate a vote",
-	code:        CommandVote,
-	options: []discord.CommandOption{
+var commandVoteObject = command.Handler{
+	Description: "Initiate a vote",
+	Code:        CommandVote,
+	Options: []discord.CommandOption{
 		&discord.NumberOption{
 			OptionName:  "length",
 			Description: "The number of hours the vote should run.",
@@ -58,17 +59,17 @@ var commandVoteObject = Command{
 }
 
 // CommandVote processes a command to start a vote
-func CommandVote(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
-	if command.Options == nil || len(command.Options) < 4 {
+func CommandVote(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, cmd *discord.CommandInteraction) command.Response {
+	if cmd.Options == nil || len(cmd.Options) < 4 {
 		log.Printf("[%s] /vote command structure is somehow nil or not the correct number of elements. Wat.\n", event.GuildID)
-		return CommandResponse{ResponseEphemeral("Yeah, no, that didn't work."), nil}
+		return command.Response{Response: response.Ephemeral("Yeah, no, that didn't work."), Callback: nil}
 	}
 
 	now := time.Now().Unix()
-	hours, err := command.Options[0].FloatValue()
+	hours, err := cmd.Options[0].FloatValue()
 	if err != nil {
 		log.Printf("[%s] /vote command structure is somehow weird. Could not get the Float value of the hours option.\n", event.GuildID)
-		return CommandResponse{ResponseEphemeral("Wait, what? How many hours? Try again."), nil}
+		return command.Response{Response: response.Ephemeral("Wait, what? How many hours? Try again."), Callback: nil}
 	}
 	future := now + int64(hours*float64(3600))
 
@@ -78,28 +79,28 @@ func CommandVote(state *state.State, kvs storage.KeyValueStore, event *gateway.I
 		GuildID:   event.GuildID,
 		MessageID: discord.NullMessageID, // This is added in the MessageID callback later.
 		ChannelID: discord.NullChannelID, // This one, too!
-		Question:  command.Options[1].String(),
+		Question:  cmd.Options[1].String(),
 		Options:   map[string]string{},
 		Votes:     map[discord.UserID]string{},
 	}
-	options := command.Options[2:len(command.Options)]
+	options := cmd.Options[2:len(cmd.Options)]
 	for idx, val := range options {
 		label := val.String()
 		if len(label) > 80 {
-			return CommandResponse{ResponseEphemeral("Sorry, the options can't be longer than 80 characters!"), nil}
+			return command.Response{Response: response.Ephemeral("Sorry, the options can't be longer than 80 characters!"), Callback: nil}
 		}
 		vote.Options[fmt.Sprintf("voteOption%d", idx)] = val.String()
 	}
 	buttons := makeButtons(options)
 
-	return CommandResponse{
-		api.InteractionResponse{
+	return command.Response{
+		Response: api.InteractionResponse{
 			Type: api.MessageInteractionWithSource,
 			Data: &api.InteractionResponseData{
 				Content:    option.NewNullableString(vote.String()),
 				Components: discord.ComponentsPtr(buttons),
 			},
-		}, func(message *discord.Message) {
+		}, Callback: func(message *discord.Message) {
 			vote.MessageID = message.ID
 			vote.ChannelID = message.ChannelID
 			vote.Store(kvs)

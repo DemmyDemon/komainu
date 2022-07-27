@@ -1,7 +1,11 @@
-package commands
+package interactions
 
 import (
 	"fmt"
+	"komainu/interactions/autocomplete"
+	"komainu/interactions/command"
+	"komainu/interactions/modal"
+	"komainu/interactions/response"
 	"komainu/storage"
 	"komainu/utility"
 	"log"
@@ -16,17 +20,16 @@ import (
 )
 
 func init() {
-	registerCommandObject("faq", commandFaqObject)
-	registerCommandObject("faqset", commandFaqSetObject)
-	registerModalHandlerObject("faqadd", ModalHandler{code: FAQAddModalHandler})
-	registerAutocompleteHandlerObject("faq", AutocompleteHandler{code: FaqAutocomplete})
+	command.Register("faq", commandFaqObject)
+	command.Register("faqset", commandFaqSetObject)
+	modal.Register("faqadd", modal.Handler{Code: FAQAddModalHandler})
+	autocomplete.Register("faq", autocomplete.Handler{Code: FaqAutocomplete})
 }
 
-var commandFaqObject Command = Command{
-	group:       "faquser",
-	description: "Look up a FAQ topic",
-	code:        CommandFaq,
-	options: []discord.CommandOption{
+var commandFaqObject = command.Handler{
+	Description: "Look up a FAQ topic",
+	Code:        CommandFaq,
+	Options: []discord.CommandOption{
 		&discord.StringOption{
 			OptionName:   "topic",
 			Description:  "The name of the topic you wish to recall",
@@ -36,11 +39,10 @@ var commandFaqObject Command = Command{
 	},
 }
 
-var commandFaqSetObject Command = Command{
-	group:       "faqadmin",
-	description: "Manage FAQ topics",
-	code:        CommandFaqSet,
-	options: []discord.CommandOption{
+var commandFaqSetObject = command.Handler{
+	Description: "Manage FAQ topics",
+	Code:        CommandFaqSet,
+	Options: []discord.CommandOption{
 		&discord.SubcommandOption{
 			OptionName:  "add",
 			Description: "Add a topic to the FAQ",
@@ -72,38 +74,38 @@ var commandFaqSetObject Command = Command{
 }
 
 // CommandFaq processes a command to retrieve a FAQ item.
-func CommandFaq(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
-	if command.Options == nil || len(command.Options) != 1 {
+func CommandFaq(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, cmd *discord.CommandInteraction) command.Response {
+	if cmd.Options == nil || len(cmd.Options) != 1 {
 		log.Printf("[%s] /faq command structure is somehow nil or not a single element. Wat.\n", event.GuildID)
-		return CommandResponse{ResponseEphemeral("Invalid command structure."), nil}
+		return command.Response{Response: response.Ephemeral("Invalid command structure."), Callback: nil}
 	}
-	topic := strings.ToLower(command.Options[0].String())
+	topic := strings.ToLower(cmd.Options[0].String())
 	exists, value, err := kvs.GetString(event.GuildID, "faq", topic)
 	if err != nil {
 		log.Printf("[%s] /faq failed to GetString the topic %s: %s", event.GuildID, topic, err)
-		return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
+		return command.Response{Response: response.Ephemeral("An error occured, and has been logged."), Callback: nil}
 	}
 	if !exists {
-		return CommandResponse{ResponseEphemeral(fmt.Sprintf("Sorry, I've never heard of %s", topic)), nil}
+		return command.Response{Response: response.Ephemeral(fmt.Sprintf("Sorry, I've never heard of %s", topic)), Callback: nil}
 	}
-	return CommandResponse{ResponseMessageNoMention(value), nil}
+	return command.Response{Response: response.MessageNoMention(value), Callback: nil}
 }
 
 // CommandFaqSet processes commands to faff about in the topics list
-func CommandFaqSet(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
-	if command.Options == nil || len(command.Options) != 1 {
+func CommandFaqSet(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, cmd *discord.CommandInteraction) command.Response {
+	if cmd.Options == nil || len(cmd.Options) != 1 {
 		log.Printf("[%s] /faqset command structure is somehow nil or not a single element. Wat.\n", event.GuildID)
-		return CommandResponse{ResponseMessage("I'm sorry, what? Something very weird happened."), nil}
+		return command.Response{Response: response.Message("I'm sorry, what? Something very weird happened."), Callback: nil}
 	}
-	switch command.Options[0].Name {
+	switch cmd.Options[0].Name {
 	case "list":
-		return CommandResponse{SubCommandFaqList(kvs, event.GuildID), nil}
+		return command.Response{Response: SubCommandFaqList(kvs, event.GuildID), Callback: nil}
 	case "add":
-		return CommandResponse{SubCommandFaqAdd(kvs, event.GuildID, event.SenderID(), command.Options[0].Options), nil}
+		return command.Response{Response: SubCommandFaqAdd(kvs, event.GuildID, event.SenderID(), cmd.Options[0].Options), Callback: nil}
 	case "remove":
-		return CommandResponse{SubCommandFaqRemove(kvs, event.GuildID, command.Options[0].Options), nil}
+		return command.Response{Response: SubCommandFaqRemove(kvs, event.GuildID, cmd.Options[0].Options), Callback: nil}
 	default:
-		return CommandResponse{ResponseEphemeral("Unknown subcommand! Clearly *someone* dropped the ball!"), nil}
+		return command.Response{Response: response.Ephemeral("Unknown subcommand! Clearly *someone* dropped the ball!"), Callback: nil}
 	}
 }
 
@@ -111,20 +113,20 @@ func CommandFaqSet(state *state.State, kvs storage.KeyValueStore, event *gateway
 func SubCommandFaqAdd(kvs storage.KeyValueStore, guildID discord.GuildID, userID discord.UserID, options []discord.CommandInteractionOption) api.InteractionResponse {
 	if options == nil || len(options) != 1 {
 		log.Printf("[%s] /faqset add command structure is somehow not exactly one element. Wat.\n", guildID)
-		return ResponseEphemeral("Invalid command structure.")
+		return response.Ephemeral("Invalid command structure.")
 	}
 	key := strings.ToLower(options[0].String())
 	_, value, err := kvs.GetString(guildID, "faq", key)
 	if err != nil {
 		log.Printf("[%s] /faqset add storage lookup failed: %s", guildID, err)
-		return ResponseEphemeral("An error occured, and has been logged.")
+		return response.Ephemeral("An error occured, and has been logged.")
 	}
 	addOrUpdate := "Add FAQ item"
 	if value != "" {
 		addOrUpdate = "Update FAQ item"
 	}
 
-	return ResponseModal(
+	return modal.Respond(
 		userID, guildID, "faqadd", addOrUpdate,
 		discord.TextInputComponent{
 			CustomID:     discord.ComponentID(key),
@@ -140,29 +142,29 @@ func SubCommandFaqAdd(kvs storage.KeyValueStore, guildID discord.GuildID, userID
 func SubCommandFaqRemove(kvs storage.KeyValueStore, guildID discord.GuildID, options []discord.CommandInteractionOption) api.InteractionResponse {
 	if options == nil || len(options) != 1 {
 		log.Printf("[%s] /faqset remove command structure is somehow nil or not one element. Wat.\n", guildID)
-		return ResponseEphemeral("Invalid command structure.")
+		return response.Ephemeral("Invalid command structure.")
 	}
 	topic := strings.ToLower(options[0].String())
 	//topic := command.Options[0].String()
 	exists, value, err := kvs.GetString(guildID, "faq", topic)
 	if err != nil {
 		log.Printf("[%s] /faqset remove failed to GetString the topic %s: %s", guildID, topic, err)
-		return ResponseEphemeral("An error occured, and has been logged.")
+		return response.Ephemeral("An error occured, and has been logged.")
 	}
 	if !exists {
-		return ResponseEphemeral(fmt.Sprintf("Sorry, I've never heard of %s", topic))
+		return response.Ephemeral(fmt.Sprintf("Sorry, I've never heard of %s", topic))
 	}
 	removed, err := kvs.Delete(guildID, "faq", topic)
 	if err != nil {
 		log.Printf("[%s] /faqset remove failed to Delete the topic %s: %s", guildID, topic, err)
-		return ResponseEphemeral("An error occured, and has been logged.")
+		return response.Ephemeral("An error occured, and has been logged.")
 	}
 	if !removed {
 		// Is it even possible to get here?
-		return ResponseEphemeral(fmt.Sprintf("Sorry, I've never heard of %s", topic))
+		return response.Ephemeral(fmt.Sprintf("Sorry, I've never heard of %s", topic))
 	}
 
-	return ResponseMessageNoMention(fmt.Sprintf("Forgot %s: %s", topic, value))
+	return response.MessageNoMention(fmt.Sprintf("Forgot %s: %s", topic, value))
 }
 
 // SubCommandFaqList processes a subcommand to list all FAQ items.
@@ -170,7 +172,7 @@ func SubCommandFaqList(kvs storage.KeyValueStore, guildID discord.GuildID) api.I
 	faqList, err := kvs.Keys(guildID, "faq")
 	if err != nil {
 		log.Printf("[%s] /faqset list failed to get the list: %s", guildID, err)
-		return ResponseMessage("An error occured, and has been logged.")
+		return response.Message("An error occured, and has been logged.")
 	}
 	if len(faqList) > 0 {
 		sort.Strings(faqList)
@@ -179,29 +181,29 @@ func SubCommandFaqList(kvs storage.KeyValueStore, guildID discord.GuildID) api.I
 		for _, topic := range faqList {
 			fmt.Fprintf(&sb, "- %s\n", utility.UcFirst(topic))
 		}
-		return ResponseMessageNoMention(sb.String())
+		return response.MessageNoMention(sb.String())
 	}
-	return ResponseEphemeral("I'm sad to say, there are no known topics.")
+	return response.Ephemeral("I'm sad to say, there are no known topics.")
 }
 
-func FAQAddModalHandler(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, interaction *discord.ModalInteraction) CommandResponse {
-	data := DecodeModalResponse(interaction.Components)
+func FAQAddModalHandler(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, interaction *discord.ModalInteraction) command.Response {
+	data := modal.DecodeModalResponse(interaction.Components)
 	for key, value := range data {
 		err := kvs.Set(event.GuildID, "faq", key, value)
 		if err != nil {
 			log.Printf("[%s] Error storing FAQ item %q: %s", event.GuildID, key, err)
-			return CommandResponse{ResponseEphemeral("There was an error saving that, but it has been logged!"), nil}
+			return command.Response{Response: response.Ephemeral("There was an error saving that, but it has been logged!"), Callback: nil}
 		}
 		// Early return because we only expect one, but ranging over the one is the simplest code. *shrug*
-		return CommandResponse{ResponseMessageNoMention(fmt.Sprintf("Neat! I learned all about %q", key)), nil}
+		return command.Response{Response: response.MessageNoMention(fmt.Sprintf("Neat! I learned all about %q", key)), Callback: nil}
 	}
 	log.Printf("[%s] There was no data when trying to sote FAQ data?!  %#v", event.GuildID, interaction.Components)
-	return CommandResponse{ResponseEphemeral("There was a weird problem, but don't worry! It has been logged for review."), nil}
+	return command.Response{Response: response.Ephemeral("There was a weird problem, but don't worry! It has been logged for review."), Callback: nil}
 }
 
 func FaqAutocomplete(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, interaction *discord.AutocompleteInteraction) api.AutocompleteChoices {
 	choices := api.AutocompleteStringChoices{}
-	found, value := GetAutocompleteValue(interaction)
+	found, value := autocomplete.GetAutocompleteValue(interaction)
 	if !found {
 		log.Printf("[%s] Could not determine autocomplete value from %#v", event.GuildID, interaction)
 		return choices // Still empty at this point
@@ -221,8 +223,6 @@ func FaqAutocomplete(state *state.State, kvs storage.KeyValueStore, event *gatew
 			choices = append(choices, discord.StringChoice{Name: utility.UcFirst(key), Value: key})
 		}
 	}
-
-	// log.Printf("%d matches for %q", len(choices), typed)
 
 	return choices
 }

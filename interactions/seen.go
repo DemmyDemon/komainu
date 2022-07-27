@@ -1,8 +1,10 @@
-package commands
+package interactions
 
 import (
 	"bytes"
 	"fmt"
+	"komainu/interactions/command"
+	"komainu/interactions/response"
 	"komainu/storage"
 	"log"
 	"time"
@@ -14,11 +16,10 @@ import (
 )
 
 func init() {
-	registerCommandObject("seen", Command{
-		group:       "seen",
-		description: "Check when someone was last around",
-		code:        CommandSeen,
-		options: []discord.CommandOption{
+	command.Register("seen", command.Handler{
+		Description: "Check when someone was last around",
+		Code:        CommandSeen,
+		Options: []discord.CommandOption{
 			&discord.UserOption{
 				OptionName:  "user",
 				Description: "The user to look up",
@@ -26,17 +27,15 @@ func init() {
 			},
 		},
 	})
-	registerCommandObject("neverseen", Command{
-		group:       "seen",
-		description: "Get a list of people that the bot has never seen say anything!",
-		code:        CommandNeverSeen,
-		options:     []discord.CommandOption{},
+	command.Register("neverseen", command.Handler{
+		Description: "Get a list of people that the bot has never seen say anything!",
+		Code:        CommandNeverSeen,
+		Options:     []discord.CommandOption{},
 	})
-	registerCommandObject("inactive", Command{
-		group:       "seen",
-		description: "Get a list of inactive people",
-		code:        CommandInactive,
-		options: []discord.CommandOption{
+	command.Register("inactive", command.Handler{
+		Description: "Get a list of inactive people",
+		Code:        CommandInactive,
+		Options: []discord.CommandOption{
 			&discord.IntegerOption{
 				OptionName:  "days",
 				Description: "How many days of quiet makes someone inactive?",
@@ -44,11 +43,10 @@ func init() {
 			},
 		},
 	})
-	registerCommandObject("activerole", Command{
-		group:       "seen",
-		description: "Set what role is granted and revoked for active/inactive users, and under what conditions.",
-		code:        CommandActiveRole,
-		options: []discord.CommandOption{
+	command.Register("activerole", command.Handler{
+		Description: "Set what role is granted and revoked for active/inactive users, and under what conditions.",
+		Code:        CommandActiveRole,
+		Options: []discord.CommandOption{
 			&discord.RoleOption{
 				OptionName:  "role",
 				Description: "The role to giveth and taketh away.",
@@ -63,53 +61,52 @@ func init() {
 			},
 		},
 	})
-	registerCommandObject("seeeveryone", Command{
-		group:       "seen",
-		description: "Ruin the /seen system by marking everyone here as seen right now.",
-		code:        CommandSeeEveryone,
-		options:     []discord.CommandOption{},
+	command.Register("seeeveryone", command.Handler{
+		Description: "Ruin the /seen system by marking everyone here as seen right now.",
+		Code:        CommandSeeEveryone,
+		Options:     []discord.CommandOption{},
 	})
 }
 
 // CommandSeen processes a command to look up when a user was last seen.
-func CommandSeen(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
-	if command.Options != nil && len(command.Options) > 0 {
-		option, err := command.Options[0].SnowflakeValue()
+func CommandSeen(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, cmd *discord.CommandInteraction) command.Response {
+	if cmd.Options != nil && len(cmd.Options) > 0 {
+		option, err := cmd.Options[0].SnowflakeValue()
 		if err != nil {
 			log.Printf("[%s] Failed to get snowflake value for /seen: %s\n", event.GuildID, err)
-			return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
+			return command.Response{Response: response.Ephemeral("An error occured, and has been logged."), Callback: nil}
 		}
 		if me, err := state.Me(); err != nil {
 			log.Printf("[%s] Failed to look up myself to see if I match /seen: %s\n", event.GuildID, err)
-			return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
+			return command.Response{Response: response.Ephemeral("An error occured, and has been logged."), Callback: nil}
 		} else if me.ID == discord.UserID(option) {
-			return CommandResponse{ResponseEphemeral("I'm right here, buddy!"), nil}
+			return command.Response{Response: response.Ephemeral("I'm right here, buddy!"), Callback: nil}
 		}
 
 		found, timestamp, err := storage.LastSeen(kvs, event.GuildID, discord.UserID(option))
 		if err != nil {
 			log.Printf("[%s] Failed to get %s from Key/Value Store for /seen lookup: %s\n", event.GuildID, option, err)
-			return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
+			return command.Response{Response: response.Ephemeral("An error occured, and has been logged."), Callback: nil}
 		}
 		if !found {
-			return CommandResponse{ResponseMessageNoMention(fmt.Sprintf("Sorry, I've never seen <@%s> say anything at all!", option)), nil}
+			return command.Response{Response: response.MessageNoMention(fmt.Sprintf("Sorry, I've never seen <@%s> say anything at all!", option)), Callback: nil}
 		}
-		return CommandResponse{ResponseMessageNoMention(fmt.Sprintf("I last saw <@%s> <t:%d:R>", option, timestamp)), nil}
+		return command.Response{Response: response.MessageNoMention(fmt.Sprintf("I last saw <@%s> <t:%d:R>", option, timestamp)), Callback: nil}
 	}
-	return CommandResponse{ResponseEphemeral("No user given?!"), nil}
+	return command.Response{Response: response.Ephemeral("No user given?!"), Callback: nil}
 }
 
 // CommandInactive processes a command to list who has not been active in a given timeframe.
-func CommandInactive(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
+func CommandInactive(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, cmd *discord.CommandInteraction) command.Response {
 	days := int64(30)
-	if command.Options != nil && len(command.Options) > 0 {
-		d, err := command.Options[0].IntValue()
+	if cmd.Options != nil && len(cmd.Options) > 0 {
+		d, err := cmd.Options[0].IntValue()
 		if err != nil {
 			log.Printf("[%s] Failed to get int value for /inactive: %s", event.GuildID, err)
-			return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
+			return command.Response{Response: response.Ephemeral("An error occured, and has been logged."), Callback: nil}
 		}
 		if d <= 0 {
-			return CommandResponse{ResponseEphemeral(fmt.Sprintf("Everyone. Everyone has been inactive for at least %d days.", d)), nil}
+			return command.Response{Response: response.Ephemeral(fmt.Sprintf("Everyone. Everyone has been inactive for at least %d days.", d)), Callback: nil}
 		}
 		days = d
 	}
@@ -117,7 +114,7 @@ func CommandInactive(state *state.State, kvs storage.KeyValueStore, event *gatew
 	members, err := state.Session.Members(event.GuildID, 0)
 	if err != nil {
 		log.Printf("[%s] Failed to get member list for /inactive lookup: %s", event.GuildID, err)
-		return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
+		return command.Response{Response: response.Ephemeral("An error occured, and has been logged."), Callback: nil}
 	}
 
 	var bt bytes.Buffer
@@ -135,7 +132,7 @@ func CommandInactive(state *state.State, kvs storage.KeyValueStore, event *gatew
 		seen, when, err := storage.LastSeen(kvs, event.GuildID, member.User.ID)
 		if err != nil {
 			log.Printf("[%s] Failed to get a storage.LastSeen for %s: %s", event.GuildID, member.User.ID, err)
-			return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
+			return command.Response{Response: response.Ephemeral("An error occured, and has been logged."), Callback: nil}
 		} else if !seen {
 			never++
 			joinTime := member.Joined.Format("2006-01-02")
@@ -166,22 +163,22 @@ func CommandInactive(state *state.State, kvs storage.KeyValueStore, event *gatew
 	message += "\n"
 
 	if inactiveCount+never > 0 {
-		return CommandResponse{ResponseMessageAttachText(
+		return command.Response{Response: response.MessageAttachFile(
 			message,
 			fmt.Sprintf("inactive_report_%s.txt", time.Now().Format("2006-01-02")),
 			&bt,
-		), nil}
+		), Callback: nil}
 	} else {
-		return CommandResponse{ResponseMessage(message), nil}
+		return command.Response{Response: response.Message(message), Callback: nil}
 	}
 }
 
 // CommandNeverSeen processes a command to list everyone that has never been seen by the bot.
-func CommandNeverSeen(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
+func CommandNeverSeen(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, cmd *discord.CommandInteraction) command.Response {
 	members, err := state.Session.Members(event.GuildID, 0)
 	if err != nil {
 		log.Printf("[%s] Failed to get member list for /neverseen lookup: %s", event.GuildID, err)
-		return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
+		return command.Response{Response: response.Ephemeral("An error occured, and has been logged."), Callback: nil}
 	}
 	count := 0
 
@@ -195,7 +192,7 @@ func CommandNeverSeen(state *state.State, kvs storage.KeyValueStore, event *gate
 		seen, _, err := storage.LastSeen(kvs, event.GuildID, member.User.ID)
 		if err != nil {
 			log.Printf("[%s] Failed to get a storage.LastSeen for %s: %s", event.GuildID, member.User.ID, err)
-			return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
+			return command.Response{Response: response.Ephemeral("An error occured, and has been logged."), Callback: nil}
 		}
 		if !seen {
 			count++
@@ -208,28 +205,28 @@ func CommandNeverSeen(state *state.State, kvs storage.KeyValueStore, event *gate
 	}
 
 	if count > 0 {
-		return CommandResponse{ResponseMessageAttachText(
+		return command.Response{Response: response.MessageAttachFile(
 			fmt.Sprintf("%d users have never been seen by me.", count),
 			fmt.Sprintf("never_seen_report_%s.txt", time.Now().Format("2006-01-02")),
 			&bt,
-		), nil}
+		), Callback: nil}
 	} else {
-		return CommandResponse{ResponseMessage("Everyone seems to have at least said at least *something!*"), nil}
+		return command.Response{Response: response.Message("Everyone seems to have at least said at least *something!*"), Callback: nil}
 	}
 }
 
 // CommandActiveRole processes a command to set an automatic "active" role and revoke it after a certain amount of days.
-func CommandActiveRole(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
-	if command.Options == nil || len(command.Options) != 2 {
+func CommandActiveRole(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, cmd *discord.CommandInteraction) command.Response {
+	if cmd.Options == nil || len(cmd.Options) != 2 {
 		log.Printf("[%s] /activerole has a weird number of arguments\n", event.GuildID)
-		return CommandResponse{ResponseEphemeral("Wait, what? Something odd happened, and was logged."), nil}
+		return command.Response{Response: response.Ephemeral("Wait, what? Something odd happened, and was logged."), Callback: nil}
 	}
 
 	// Processing these in reverse order because of the Special Meaning of days == 0
-	days, err := command.Options[1].IntValue()
+	days, err := cmd.Options[1].IntValue()
 	if err != nil {
 		log.Printf("[%s] Error encountered trying to turn days argument into an actual int64 in /activerole: %s\n", event.GuildID, err)
-		return CommandResponse{ResponseEphemeral("That's very odd. I've logged that it didn't go according to plan."), nil}
+		return command.Response{Response: response.Ephemeral("That's very odd. I've logged that it didn't go according to plan."), Callback: nil}
 	}
 
 	if days == 0 {
@@ -239,42 +236,42 @@ func CommandActiveRole(state *state.State, kvs storage.KeyValueStore, event *gat
 		if _, err := kvs.Delete(event.GuildID, "activerole", "role"); err != nil {
 			log.Printf("[%s] Tried to disable activerole, however %s", event.GuildID, err)
 		}
-		return CommandResponse{ResponseMessage("So noted. Feature disabled."), nil}
+		return command.Response{Response: response.Message("So noted. Feature disabled."), Callback: nil}
 	}
 
 	if err := kvs.Set(event.GuildID, "activerole", "days", days); err != nil {
 		log.Printf("[%s] Error storing the days for /activerole: %s\n", event.GuildID, err)
-		return CommandResponse{ResponseEphemeral("There is something strange in this neighbourhood. I've logged it for the Bug Busters to investigate later."), nil}
+		return command.Response{Response: response.Ephemeral("There is something strange in this neighbourhood. I've logged it for the Bug Busters to investigate later."), Callback: nil}
 	}
 
-	snowflake, err := command.Options[0].SnowflakeValue()
+	snowflake, err := cmd.Options[0].SnowflakeValue()
 	if err != nil {
 		log.Printf("[%s] Error encountered trying to turn role argument into an actual snowflake in /activerole: %s\n", event.GuildID, err)
-		return CommandResponse{ResponseEphemeral("That's very odd. I've logged that it didn't go as planned."), nil}
+		return command.Response{Response: response.Ephemeral("That's very odd. I've logged that it didn't go as planned."), Callback: nil}
 	}
 	roleID := discord.RoleID(snowflake)
 	if err := kvs.Set(event.GuildID, "activerole", "role", roleID); err != nil {
 		log.Printf("[%s] Error storing the role for /activerole: %s\n", event.GuildID, err)
-		return CommandResponse{ResponseEphemeral("There is something strange in this neighbourhood. I've logged it for the Bug Busters to look at later."), nil}
+		return command.Response{Response: response.Ephemeral("There is something strange in this neighbourhood. I've logged it for the Bug Busters to look at later."), Callback: nil}
 	}
 
-	return CommandResponse{ResponseMessageNoMention(fmt.Sprintf("Okay, will revoke <@&%d> after %d days, and grant it to anyone that says anything.", roleID, days)), nil}
+	return command.Response{Response: response.MessageNoMention(fmt.Sprintf("Okay, will revoke <@&%d> after %d days, and grant it to anyone that says anything.", roleID, days)), Callback: nil}
 
 }
 
 // CommandSeeEveryone processes a command to mark eeeeveryone in the guild as "seen" right now.
-func CommandSeeEveryone(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, command *discord.CommandInteraction) CommandResponse {
+func CommandSeeEveryone(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, cmd *discord.CommandInteraction) command.Response {
 	members, err := state.Session.Members(event.GuildID, 0)
 	if err != nil {
 		log.Printf("[%s] Failed to get member list for /SeeEveryone: %s", event.GuildID, err)
-		return CommandResponse{ResponseEphemeral("An error occured, and has been logged."), nil}
+		return command.Response{Response: response.Ephemeral("An error occured, and has been logged."), Callback: nil}
 	}
 	for _, member := range members {
 		err := storage.See(kvs, event.GuildID, member.User.ID)
 		if err != nil {
 			log.Printf("[%s] Failed to See member during seeing spree: %s", event.GuildID, err)
-			return CommandResponse{ResponseMessage("Okay, something weird happened partway through that. It was logged."), nil}
+			return command.Response{Response: response.Message("Okay, something weird happened partway through that. It was logged."), Callback: nil}
 		}
 	}
-	return CommandResponse{ResponseMessage("Eeeeeveryone was marked as being seen just now."), nil}
+	return command.Response{Response: response.Message("Eeeeeveryone was marked as being seen just now."), Callback: nil}
 }

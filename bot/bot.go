@@ -2,11 +2,15 @@ package bot
 
 import (
 	"context"
-	"komainu/commands"
+	_ "komainu/interactions" // To make all the interactions init()
+	"komainu/interactions/autocomplete"
+	"komainu/interactions/command"
+	"komainu/interactions/modal"
 	"komainu/storage"
 	"log"
 	"os"
 
+	"github.com/diamondburned/arikawa/v3/discord"
 	"github.com/diamondburned/arikawa/v3/gateway"
 	"github.com/diamondburned/arikawa/v3/state"
 )
@@ -19,6 +23,8 @@ func Connect(cfg *storage.Configuration, kvs storage.KeyValueStore) *state.State
 	}
 
 	state := state.New("Bot " + token)
+
+	// TODO: Break up this function!
 
 	state.AddHandler(func(e *gateway.MessageCreateEvent) {
 		if e.GuildID == 0 {
@@ -35,12 +41,19 @@ func Connect(cfg *storage.Configuration, kvs storage.KeyValueStore) *state.State
 		}
 	})
 
-	commands.AddDeleteHandler(state, kvs)
-	commands.AddCommandHandler(state, kvs)
-
-	state.AddHandler(func(e *gateway.GuildCreateEvent) {
-		commands.RegisterCommands(state, e.ID)
+	state.AddHandler(func(e *gateway.MessageDeleteEvent) {
+		if e.GuildID == discord.NullGuildID {
+			return
+		}
+		_, err := kvs.Delete(e.GuildID, "votes", e.ID)
+		if err != nil {
+			log.Printf("[%s] Encountered an error removing vote from KVS after message deletion: %s\n", e.GuildID, err)
+		}
 	})
+
+	command.AddHandler(state, kvs)
+	autocomplete.AddHandler(state, kvs)
+	modal.AddHandler(state, kvs)
 
 	state.AddIntents(gateway.IntentGuilds |
 		gateway.IntentGuildMembers |

@@ -1,6 +1,8 @@
-package commands
+package modal
 
 import (
+	"komainu/interactions/command"
+	"komainu/interactions/response"
 	"komainu/storage"
 	"log"
 	"time"
@@ -14,18 +16,18 @@ import (
 	"github.com/google/uuid"
 )
 
-type ModalHandler struct {
-	code ModalHandlerFunction
+type Handler struct {
+	Code HandlerFunction
 }
 
-type ModalHandlerFunction func(
+type HandlerFunction func(
 	state *state.State,
 	kvs storage.KeyValueStore,
 	event *gateway.InteractionCreateEvent,
 	interaction *discord.ModalInteraction,
-) CommandResponse
+) command.Response
 
-type ModalSecret struct {
+type Secret struct {
 	Handler string
 	User    discord.UserID
 	Guild   discord.GuildID
@@ -35,12 +37,41 @@ type ModalSecret struct {
 var modalMaxAge time.Duration = time.Minute * 15
 
 // modals holds the modal handlers to accept.
-var modals = map[string]ModalHandler{}
+var modals = map[string]Handler{}
 
-var modalSecrets = map[string]ModalSecret{}
+var modalSecrets = map[string]Secret{}
 
 func init() {
 	go startRemovingStaleSecrets()
+}
+
+// AddHandler adds the modal interactin handler to the given state
+func AddHandler(state *state.State, kvs storage.KeyValueStore) {
+	state.AddHandler(func(e *gateway.InteractionCreateEvent) {
+		if interaction, ok := e.Data.(*discord.ModalInteraction); ok {
+			id := string(interaction.CustomID)
+			if secret, exist := modalSecrets[id]; exist {
+				if secret.User != e.SenderID() {
+					log.Printf("[%s] Modal form submission from WRONG USER: %s, but expected %s", e.GuildID, e.SenderID(), secret.User)
+				}
+				if val, ok := modals[secret.Handler]; ok {
+					response := val.Code(state, kvs, e, interaction)
+					if err := state.RespondInteraction(e.ID, e.Token, response.Response); err != nil {
+						log.Printf("[%s] Failed to send modal interaction response: %s", e.GuildID, err)
+					}
+				} else {
+					log.Printf("[%s] has UNKNOWN modal interaction %#v", e.GuildID, secret)
+				}
+				delete(modalSecrets, id)
+			} else {
+				log.Printf("[%s] expired/invalid modal token %s used by %s\n", e.GuildID, id, e.SenderID())
+				if err := state.RespondInteraction(e.ID, e.Token, response.Ephemeral("Sorry, access was denied. Took too long to respond?")); err != nil {
+					log.Printf("[%s] ...and there was an error telling them their token expired: %s", e.GuildID, err)
+				}
+				return
+			}
+		}
+	})
 }
 
 func startRemovingStaleSecrets() {
@@ -56,7 +87,7 @@ func startRemovingStaleSecrets() {
 	}
 }
 
-func registerModalHandlerObject(name string, handler ModalHandler) {
+func Register(name string, handler Handler) {
 	modals[name] = handler
 }
 
@@ -90,9 +121,9 @@ func decodeActionRowComponent(arc discord.ActionRowComponent, response map[strin
 	}
 }
 
-func ResponseModal(user discord.UserID, guild discord.GuildID, name string, title string, tics ...discord.TextInputComponent) api.InteractionResponse {
+func Respond(user discord.UserID, guild discord.GuildID, name string, title string, tics ...discord.TextInputComponent) api.InteractionResponse {
 	id := uuid.New().String()
-	modalSecrets[id] = ModalSecret{
+	modalSecrets[id] = Secret{
 		Handler: name,
 		User:    user,
 		Guild:   guild,
