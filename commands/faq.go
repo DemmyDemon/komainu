@@ -19,6 +19,7 @@ func init() {
 	registerCommandObject("faq", commandFaqObject)
 	registerCommandObject("faqset", commandFaqSetObject)
 	registerModalHandlerObject("faqadd", ModalHandler{code: FAQAddModalHandler})
+	registerAutocompleteHandlerObject("faq", AutocompleteHandler{code: FaqAutocomplete})
 }
 
 var commandFaqObject Command = Command{
@@ -27,9 +28,10 @@ var commandFaqObject Command = Command{
 	code:        CommandFaq,
 	options: []discord.CommandOption{
 		&discord.StringOption{
-			OptionName:  "topic",
-			Description: "The name of the topic you wish to recall",
-			Required:    true,
+			OptionName:   "topic",
+			Description:  "The name of the topic you wish to recall",
+			Required:     true,
+			Autocomplete: true,
 		},
 	},
 }
@@ -195,4 +197,32 @@ func FAQAddModalHandler(state *state.State, kvs storage.KeyValueStore, event *ga
 	}
 	log.Printf("[%s] There was no data when trying to sote FAQ data?!  %#v", event.GuildID, interaction.Components)
 	return CommandResponse{ResponseEphemeral("There was a weird problem, but don't worry! It has been logged for review."), nil}
+}
+
+func FaqAutocomplete(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, interaction *discord.AutocompleteInteraction) api.AutocompleteChoices {
+	choices := api.AutocompleteStringChoices{}
+	found, value := GetAutocompleteValue(interaction)
+	if !found {
+		log.Printf("[%s] Could not determine autocomplete value from %#v", event.GuildID, interaction)
+		return choices // Still empty at this point
+	}
+
+	typed := strings.ToLower(value.String())
+	typed = strings.ReplaceAll(typed, "\"", "") // Because the value is quoted, for some damn reason.
+
+	keys, err := kvs.Keys(event.GuildID, "faq")
+	if err != nil {
+		log.Printf("[%s] Error looking up FAQ keys: %s", event.GuildID, err)
+		return choices // Still empty at this point.
+	}
+
+	for _, key := range keys {
+		if strings.HasPrefix(key, typed) {
+			choices = append(choices, discord.StringChoice{Name: utility.UcFirst(key), Value: key})
+		}
+	}
+
+	// log.Printf("%d matches for %q", len(choices), typed)
+
+	return choices
 }

@@ -216,6 +216,22 @@ func AddCommandHandler(state *state.State, kvs storage.KeyValueStore) {
 				}
 				return
 			}
+		case *discord.AutocompleteInteraction:
+			if val, ok := autocompleters[interaction.Name]; ok {
+				response := val.code(state, kvs, e, interaction)
+				state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
+					Type: api.AutocompleteResult,
+					Data: &api.InteractionResponseData{
+						Choices: response,
+					},
+				})
+			} else {
+				state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
+					Type: api.AutocompleteResult,
+					Data: &api.InteractionResponseData{},
+				})
+				log.Printf("[%s] Unknown autocomplete target %q used", e.GuildID, interaction.Name)
+			}
 		default:
 			log.Printf("Unhandled interaction type %T\n", e.Data)
 			return
