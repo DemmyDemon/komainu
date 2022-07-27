@@ -149,12 +149,14 @@ func AddCommandHandler(state *state.State, kvs storage.KeyValueStore) {
 			}
 
 			if val, ok := commands[interaction.Name]; ok {
+				/* HasAccess is made obsolete by the new-ish Discord access settings for commands.
 				if !HasAccess(kvs, state, e.GuildID, e.ChannelID, e.Member, val.group) {
 					if err := state.RespondInteraction(e.ID, e.Token, ResponseEphemeral("Sorry, access was denied.")); err != nil {
 						log.Println("An error occured posting access denied response:", err)
 					}
 					return
 				}
+				*/
 
 				response := val.code(state, kvs, e, interaction)
 

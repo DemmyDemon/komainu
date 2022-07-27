@@ -14,7 +14,9 @@ import (
 )
 
 func init() {
-	registerCommandObject("access", commandAccessObject)
+	// Discord has new-ish access management for commands now.
+	// Disabled registration of this command, as we're not handling access ourselves anymore.
+	// registerCommandObject("access", commandAccessObject)
 }
 
 var commandAccessObject Command = Command{
