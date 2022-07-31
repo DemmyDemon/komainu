@@ -58,15 +58,12 @@ func Register(name string, command Handler) {
 
 // AddHandler adds handler for commands, but also the GuildCreate event for command registration.
 func AddHandler(state *state.State, kvs storage.KeyValueStore) {
-
-	// TODO: interactions/guildcreate package and register there?
-	// Does that even make sense, considering this is *isn't* an interaction, but an interaction type handler.
-	// Needs further pondering.
-	state.AddHandler(func(e *gateway.GuildCreateEvent) {
-		RegisterCommands(state, e.ID)
-	})
 	state.AddHandler(func(e *gateway.InteractionCreateEvent) {
 		if interaction, ok := e.Data.(*discord.CommandInteraction); ok {
+			if e.GuildID == discord.NullGuildID || e.Member == nil { // Command issued in private
+				state.RespondInteraction(e.ID, e.Token, response.Ephemeral("I'm sorry, I do not respond to commands in private."))
+				return
+			}
 			if !userTokenBin.Allocate(discord.Snowflake(e.GuildID), discord.Snowflake(e.Member.User.ID)) {
 				if err := state.RespondInteraction(e.ID, e.Token, response.Ephemeral("You are using too many commands too quickly. Calm down.")); err != nil {
 					log.Println("An error occured posting throttle warning emphemral response (user):", err)
@@ -107,65 +104,50 @@ func AddHandler(state *state.State, kvs storage.KeyValueStore) {
 	})
 }
 
-// ReplacementRegisterCommands isn't a thing yet.
-func ReplacementRegisterCommands(state *state.State) error {
+// RegisterCommands chews up the commands registered for the bot and actually registers them with Discord.
+func RegisterCommands(state *state.State) error {
 	app, err := state.CurrentApplication()
 	if err != nil {
 		return err
 	}
-	current, err := state.Commands(app.ID)
+	adminOnly := discord.NewPermissions(0)
+	bulkCommands := []api.CreateCommandData{}
+	for name, data := range commands {
+		bulkCommands = append(bulkCommands, api.CreateCommandData{
+			Name:                     name,
+			Description:              data.Description,
+			Options:                  data.Options,
+			DefaultMemberPermissions: adminOnly,
+		})
+	}
+	registered, err := state.BulkOverwriteCommands(app.ID, bulkCommands)
 	if err != nil {
 		return err
 	}
-	for _, command := range current {
-		if command.AppID != app.ID {
-			continue
-		}
-		log.Printf("/%s - %s", command.Name, command.Version)
-	}
-
-	log.Printf("Will attempt registration of %d commands", len(commands))
+	log.Printf("%d commands successfully registered", len(registered))
 	return nil
 }
 
-// RegisterCommands registers the command in the given guild, clearing out any obsolete commands.
-func RegisterCommands(state *state.State, guildID discord.GuildID) {
+// ClearObsoleteCommands removes the old, obsolete, per-guild-registered commands.
+func ClearObsoleteCommands(state *state.State, guildID discord.GuildID) {
 	app, err := state.CurrentApplication()
 	if err != nil {
-		log.Println("Failed to register commands: Could not determine app ID:", err)
+		log.Println("Failed to clear obsolete commands: Could not determine app ID:", err)
 		return
 	}
 
 	currentCommands, err := state.GuildCommands(app.ID, guildID)
 	if err != nil {
-		log.Printf("[%s] Failed to register commands: Could not determine current guild commands:%s\n", guildID, err)
+		log.Printf("[%s] Failed to clear obsolete commands: Could not determine current guild commands:%s\n", guildID, err)
 		return
 	}
 	for _, command := range currentCommands {
 		if command.AppID == app.ID {
-			if _, ok := commands[command.Name]; !ok {
-				if err := state.DeleteGuildCommand(app.ID, guildID, command.ID); err != nil {
-					log.Printf("[%s] Tried to remove obsolete command /%s, but %s\n", guildID, command.Name, err)
-				} else {
-					log.Printf("[%s] Successfully removed obsolete Guild command /%s\n", guildID, command.Name)
-				}
+			if err := state.DeleteGuildCommand(app.ID, guildID, command.ID); err != nil {
+				log.Printf("[%s] Tried to remove obsolete Guild command /%s, but %s\n", guildID, command.Name, err)
+			} else {
+				log.Printf("[%s] Successfully removed obsolete Guild command /%s\n", guildID, command.Name)
 			}
-		}
-	}
-
-	log.Printf("[%s] Registering %d commands", guildID, len(commands))
-
-	for name, data := range commands {
-		_, err := state.CreateGuildCommand(app.ID, guildID, api.CreateCommandData{
-			Name:                     name,
-			Description:              data.Description,
-			Options:                  data.Options,
-			DefaultMemberPermissions: discord.NewPermissions(0),
-		})
-		if err != nil {
-			log.Printf("[%s] Failed to create guild command /%s: %s\n", guildID, name, err)
-		} else {
-			log.Printf("[%s] Registered command /%s", guildID, name)
 		}
 	}
 }

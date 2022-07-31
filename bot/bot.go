@@ -54,6 +54,12 @@ func Connect(cfg *storage.Configuration, kvs storage.KeyValueStore) *state.State
 		}
 	})
 
+	// TODO: interactions/guildcreate package and register there?
+	// I mean, this'll be moot once everyone is running this version anyway.
+	state.AddHandler(func(e *gateway.GuildCreateEvent) {
+		command.ClearObsoleteCommands(state, e.ID)
+	})
+
 	command.AddHandler(state, kvs)
 	autocomplete.AddHandler(state, kvs)
 	modal.AddHandler(state, kvs)
@@ -86,7 +92,7 @@ func Connect(cfg *storage.Configuration, kvs storage.KeyValueStore) *state.State
 	// That was originally supposed to be "some commands only work in the guild I use for testing" stuff,
 	// but that turned out to be a bad idea, and now I'm stuck with per-guild registration. Dumb.
 	// (For now, this is a stub function that does nothing but list some rubbish)
-	if err := command.ReplacementRegisterCommands(state); err != nil {
+	if err := command.RegisterCommands(state); err != nil {
 		log.Fatalf("Error during command registration: %s", err)
 	}
 
