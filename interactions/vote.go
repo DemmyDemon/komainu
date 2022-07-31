@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"komainu/interactions/command"
 	"komainu/interactions/component"
+	"komainu/interactions/delete"
 	"komainu/interactions/response"
 	"komainu/storage"
 	"log"
@@ -19,6 +20,7 @@ import (
 func init() {
 	command.Register("vote", commandVoteObject)
 	component.Register("vote", component.Handler{Code: ComponentVote})
+	delete.Register(delete.Handler{Code: DeleteVote})
 }
 
 var commandVoteObject = command.Handler{
@@ -63,6 +65,17 @@ var commandVoteObject = command.Handler{
 			Required:    false,
 		},
 	},
+}
+
+// DeleteVote will delete the appropriate vote when the message it's in is deleted.
+func DeleteVote(state *state.State, kvs storage.KeyValueStore, e *gateway.MessageDeleteEvent) {
+	if e.GuildID == discord.NullGuildID {
+		return
+	}
+	_, err := kvs.Delete(e.GuildID, "votes", e.ID)
+	if err != nil {
+		log.Printf("[%s] Encountered an error removing vote from KVS after message deletion: %s\n", e.GuildID, err)
+	}
 }
 
 // ComponentVote attempts to handle the given interaction as a vote
