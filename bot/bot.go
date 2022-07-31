@@ -82,6 +82,15 @@ func Connect(cfg *storage.Configuration, kvs storage.KeyValueStore) *state.State
 	}
 	log.Printf("Connected to Discord as %s#%s\n", user.Username, user.Discriminator)
 
+	// TODO: Move command registration here, no need to register *per guild*.
+	// That was originally supposed to be "some commands only work in the guild I use for testing" stuff,
+	// but that turned out to be a bad idea, and now I'm stuck with per-guild registration. Dumb.
+	// (For now, this is a stub function that does nothing but list some rubbish)
+	if err := command.ReplacementRegisterCommands(state); err != nil {
+		log.Fatalf("Error during command registration: %s", err)
+	}
+
+	// TODO: Maybe move these to init() in the relevant packages?
 	go storage.StartClosingExpiredVotes(state, kvs)
 	go storage.StartRevokingActiveRole(state, kvs)
 

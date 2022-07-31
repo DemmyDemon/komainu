@@ -58,6 +58,10 @@ func Register(name string, command Handler) {
 
 // AddHandler adds handler for commands, but also the GuildCreate event for command registration.
 func AddHandler(state *state.State, kvs storage.KeyValueStore) {
+
+	// TODO: interactions/guildcreate package and register there?
+	// Does that even make sense, considering this is *isn't* an interaction, but an interaction type handler.
+	// Needs further pondering.
 	state.AddHandler(func(e *gateway.GuildCreateEvent) {
 		RegisterCommands(state, e.ID)
 	})
@@ -103,6 +107,27 @@ func AddHandler(state *state.State, kvs storage.KeyValueStore) {
 	})
 }
 
+// ReplacementRegisterCommands isn't a thing yet.
+func ReplacementRegisterCommands(state *state.State) error {
+	app, err := state.CurrentApplication()
+	if err != nil {
+		return err
+	}
+	current, err := state.Commands(app.ID)
+	if err != nil {
+		return err
+	}
+	for _, command := range current {
+		if command.AppID != app.ID {
+			continue
+		}
+		log.Printf("/%s - %s", command.Name, command.Version)
+	}
+
+	log.Printf("Will attempt registration of %d commands", len(commands))
+	return nil
+}
+
 // RegisterCommands registers the command in the given guild, clearing out any obsolete commands.
 func RegisterCommands(state *state.State, guildID discord.GuildID) {
 	app, err := state.CurrentApplication()
@@ -121,6 +146,8 @@ func RegisterCommands(state *state.State, guildID discord.GuildID) {
 			if _, ok := commands[command.Name]; !ok {
 				if err := state.DeleteGuildCommand(app.ID, guildID, command.ID); err != nil {
 					log.Printf("[%s] Tried to remove obsolete command /%s, but %s\n", guildID, command.Name, err)
+				} else {
+					log.Printf("[%s] Successfully removed obsolete Guild command /%s\n", guildID, command.Name)
 				}
 			}
 		}
