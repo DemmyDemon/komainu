@@ -5,6 +5,7 @@ import (
 	_ "komainu/interactions" // To make all the interactions init()
 	"komainu/interactions/autocomplete"
 	"komainu/interactions/command"
+	"komainu/interactions/component"
 	"komainu/interactions/modal"
 	"komainu/storage"
 	"log"
@@ -26,6 +27,7 @@ func Connect(cfg *storage.Configuration, kvs storage.KeyValueStore) *state.State
 
 	// TODO: Break up this function!
 
+	// TODO: This is very out of place here. We need a interactions/message package, and for the seen interaction file to register there.
 	state.AddHandler(func(e *gateway.MessageCreateEvent) {
 		if e.GuildID == 0 {
 			return // It's either a private message, or an ephemeral-response command. Doesn't count.
@@ -41,6 +43,7 @@ func Connect(cfg *storage.Configuration, kvs storage.KeyValueStore) *state.State
 		}
 	})
 
+	// TODO: This is very out of place here. We need a interactions/delete package, I guess.
 	state.AddHandler(func(e *gateway.MessageDeleteEvent) {
 		if e.GuildID == discord.NullGuildID {
 			return
@@ -54,6 +57,7 @@ func Connect(cfg *storage.Configuration, kvs storage.KeyValueStore) *state.State
 	command.AddHandler(state, kvs)
 	autocomplete.AddHandler(state, kvs)
 	modal.AddHandler(state, kvs)
+	component.AddHandler(state, kvs)
 
 	state.AddIntents(gateway.IntentGuilds |
 		gateway.IntentGuildMembers |

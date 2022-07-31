@@ -3,6 +3,7 @@ package interactions
 import (
 	"fmt"
 	"komainu/interactions/command"
+	"komainu/interactions/component"
 	"komainu/interactions/response"
 	"komainu/storage"
 	"log"
@@ -17,6 +18,7 @@ import (
 
 func init() {
 	command.Register("vote", commandVoteObject)
+	component.Register("vote", component.Handler{Code: ComponentVote})
 }
 
 var commandVoteObject = command.Handler{
@@ -55,7 +57,26 @@ var commandVoteObject = command.Handler{
 			Description: "The fourth vote option description (80 char max)",
 			Required:    false,
 		},
+		&discord.StringOption{
+			OptionName:  "fifth",
+			Description: "The fifth vote option description (80 char max)",
+			Required:    false,
+		},
 	},
+}
+
+// ComponentVote attempts to handle the given interaction as a vote
+func ComponentVote(state *state.State, kvs storage.KeyValueStore, e *gateway.InteractionCreateEvent, interaction discord.ComponentInteraction) api.InteractionResponse {
+	isVote, resp, err := storage.HandleInteractionAsVote(state, kvs, e, interaction)
+	if err != nil {
+		log.Printf("[%s] error while trying to handle an interaction as a vote: %s\n", e.GuildID, err)
+		return response.Ephemeral("Something went wrong. It was logged, so hopefully it'll get fixed.")
+	}
+	if isVote && resp != "" {
+		return response.Ephemeral(resp)
+	}
+	log.Printf("[%s] Empty response or non-vote submitted as vote interaction!", e.GuildID)
+	return response.Ephemeral("I'm sorry, but I can't find the poll you are trying to vote on?!")
 }
 
 // CommandVote processes a command to start a vote
@@ -89,7 +110,7 @@ func CommandVote(state *state.State, kvs storage.KeyValueStore, event *gateway.I
 		if len(label) > 80 {
 			return command.Response{Response: response.Ephemeral("Sorry, the options can't be longer than 80 characters!"), Callback: nil}
 		}
-		vote.Options[fmt.Sprintf("voteOption%d", idx)] = val.String()
+		vote.Options[fmt.Sprintf("vote/%d", idx)] = val.String()
 	}
 	buttons := makeButtons(options)
 
@@ -113,7 +134,7 @@ func makeButtons(options []discord.CommandInteractionOption) discord.Component {
 	for idx, option := range options {
 		buttons[idx] = &discord.ButtonComponent{
 			Style:    discord.PrimaryButtonStyle(),
-			CustomID: discord.ComponentID(fmt.Sprintf("voteOption%d", idx)),
+			CustomID: discord.ComponentID(fmt.Sprintf("vote/%d", idx)),
 			Label:    option.String(),
 		}
 	}
