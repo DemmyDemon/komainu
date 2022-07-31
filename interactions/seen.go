@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"komainu/interactions/command"
+	"komainu/interactions/message"
 	"komainu/interactions/response"
 	"komainu/storage"
 	"log"
@@ -66,6 +67,22 @@ func init() {
 		Code:        CommandSeeEveryone,
 		Options:     []discord.CommandOption{},
 	})
+	message.Register(message.Handler{Code: MessageSeen})
+}
+
+func MessageSeen(state *state.State, kvs storage.KeyValueStore, event *gateway.MessageCreateEvent) {
+	if event.GuildID == 0 {
+		return // It's either a private message, or an ephemeral-response command. Doesn't count.
+	}
+
+	if err := storage.See(kvs, event.GuildID, event.Author.ID); err != nil {
+		log.Printf("[%s] Error seeing %s in %s: %s\n", event.GuildID, event.Author.ID, event.ChannelID, err)
+	} else {
+		log.Printf("[%s] <@%s> seen in <#%s>\n", event.GuildID, event.Author.ID, event.ChannelID)
+		if err := storage.MaybeGiveActiveRole(kvs, state, event.GuildID, event.Member); err != nil {
+			log.Printf("[%s] Failed to give active role to %s: %s\n", event.GuildID, event.Author.ID, err)
+		}
+	}
 }
 
 // CommandSeen processes a command to look up when a user was last seen.
