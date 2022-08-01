@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"math"
 
 	"github.com/diamondburned/arikawa/v3/discord"
 	bolt "go.etcd.io/bbolt"
@@ -85,6 +86,11 @@ func (b *boltData) Set(guild discord.GuildID, collection string, key interface{}
 		buf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(buf, value)
 		return b.store(bucketName, keyName, buf)
+	case float64:
+		buf := make([]byte, 8)
+		bits := math.Float64bits(value)
+		binary.LittleEndian.PutUint64(buf, bits)
+		return b.store(bucketName, keyName, buf)
 	case string:
 		return b.store(bucketName, keyName, []byte(value))
 	default:
@@ -157,7 +163,17 @@ func (b *boltData) GetUint64(guild discord.GuildID, collection string, key inter
 		value = binary.LittleEndian.Uint64(raw)
 	}
 	return exist, value, err
+}
 
+// GetFloat64 looks up the data under the given guild, collection and key, assumes it's a float64 and returns if the key exists, the found float64 and any error encountered.
+func (b *boltData) GetFloat64(guild discord.GuildID, collection string, key interface{}) (exist bool, value float64, err error) {
+	exist, raw, err := b.Get(guild, collection, key)
+
+	if err == nil && exist {
+		asUint := binary.LittleEndian.Uint64(raw)
+		value = math.Float64frombits(asUint)
+	}
+	return exist, value, err
 }
 
 // Delete checks if it is possible to delete the value under the given guild, collection and key (as in "The Bucket Exists"), and attempts to do so.
