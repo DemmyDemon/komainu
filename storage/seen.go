@@ -38,6 +38,7 @@ func MaybeGiveActiveRole(kvs KeyValueStore, state *state.State, guildID discord.
 
 	if exist {
 		if !utility.ContainsRole(member.RoleIDs, role) {
+			log.Printf("[%s] Granted active role to %s", guildID, member.User.ID)
 			return state.AddRole(guildID, member.User.ID, role, api.AddRoleData{
 				AuditLogReason: "Role automatically granted for chat activity.",
 			})
@@ -56,6 +57,7 @@ func RemoveActiveRole(kvs KeyValueStore, state *state.State, guildID discord.Gui
 
 	if exist {
 		if utility.ContainsRole(member.RoleIDs, role) {
+			log.Printf("[%s] Removed active role from %s", guildID, member.User.ID)
 			return state.RemoveRole(guildID, member.User.ID, role, api.AuditLogReason("Role automatically revoked for chat inactivity."))
 		}
 	}
@@ -69,7 +71,7 @@ func RevokeActiveRoles(state *state.State, kvs KeyValueStore) error {
 		return fmt.Errorf("revoking active roles failed to get guilds slice: %w", err)
 	}
 	now := time.Now().Unix()
-	secondsInDay := int64(24 * 60 * 60)
+	secondsInDay := float64(24 * 60 * 60)
 	for _, guild := range guilds {
 		role := discord.NullRoleID
 		exist, err := kvs.GetObject(guild.ID, "activerole", "role", &role)
@@ -80,14 +82,14 @@ func RevokeActiveRoles(state *state.State, kvs KeyValueStore) error {
 			continue // Because if the role isn't set, this guild has no "active role"
 		}
 
-		exist, days, err := kvs.GetInt64(guild.ID, "activerole", "days")
+		exist, days, err := kvs.GetFloat64(guild.ID, "activerole", "days")
 		if err != nil {
 			log.Printf("[%s] Failed to fetch the active role time: %s\n", guild.ID, err)
 		}
-		if !exist || days < 1 {
+		if !exist {
 			continue
 		}
-		inactiveIfSeenBefore := now - (days * secondsInDay)
+		inactiveIfSeenBefore := now - int64(days*secondsInDay)
 
 		members, err := state.Session.Members(guild.ID, 0)
 		if err != nil {

@@ -240,9 +240,9 @@ func CommandActiveRole(state *state.State, kvs storage.KeyValueStore, event *gat
 	}
 
 	// Processing these in reverse order because of the Special Meaning of days == 0
-	days, err := cmd.Options[1].IntValue()
+	days, err := cmd.Options[1].FloatValue()
 	if err != nil {
-		log.Printf("[%s] Error encountered trying to turn days argument into an actual int64 in /activerole: %s\n", event.GuildID, err)
+		log.Printf("[%s] Error encountered trying to turn days argument into an actual number in /activerole: %s\n", event.GuildID, err)
 		return command.Response{Response: response.Ephemeral("That's very odd. I've logged that it didn't go according to plan."), Callback: nil}
 	}
 
@@ -272,7 +272,7 @@ func CommandActiveRole(state *state.State, kvs storage.KeyValueStore, event *gat
 		return command.Response{Response: response.Ephemeral("There is something strange in this neighbourhood. I've logged it for the Bug Busters to look at later."), Callback: nil}
 	}
 
-	return command.Response{Response: response.MessageNoMention(fmt.Sprintf("Okay, will revoke <@&%d> after %d days, and grant it to anyone that says anything.", roleID, days)), Callback: nil}
+	return command.Response{Response: response.MessageNoMention(fmt.Sprintf("Okay, will revoke <@&%d> after %.01f days, and grant it to anyone that says anything.", roleID, days)), Callback: nil}
 
 }
 
