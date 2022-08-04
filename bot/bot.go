@@ -51,7 +51,6 @@ func Connect(cfg *storage.Configuration, kvs storage.KeyValueStore) *state.State
 	}
 	log.Printf("Connected to Discord as %s#%s\n", user.Username, user.Discriminator)
 
-	// TODONE: New command stuff is nice. Quick.
 	if err := command.RegisterCommands(state); err != nil {
 		log.Fatalf("Error during command registration: %s", err)
 	}
