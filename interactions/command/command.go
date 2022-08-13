@@ -42,6 +42,7 @@ func (cr *Response) Length() int {
 type Handler struct {
 	Description string
 	Code        Command
+	Type        discord.CommandType
 	Options     []discord.CommandOption
 }
 
@@ -117,6 +118,7 @@ func RegisterCommands(state *state.State) error {
 			Name:                     name,
 			Description:              data.Description,
 			Options:                  data.Options,
+			Type:                     data.Type,
 			DefaultMemberPermissions: adminOnly,
 		})
 	}
