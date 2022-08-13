@@ -18,8 +18,6 @@ type HandlerFunction func(
 	event *gateway.MessageDeleteEvent,
 )
 
-type Hoerz func(body string) struct{}
-
 var deleteHandlers = []Handler{}
 
 // Register makes the Code go brrr when a message dies
