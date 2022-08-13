@@ -7,6 +7,7 @@ import (
 	"komainu/interactions/command"
 	"komainu/interactions/component"
 	"komainu/interactions/delete"
+	"komainu/interactions/edit"
 	"komainu/interactions/message"
 	"komainu/interactions/modal"
 	"komainu/storage"
@@ -40,6 +41,7 @@ func Connect(cfg *storage.Configuration, kvs storage.KeyValueStore) *state.State
 	component.AddHandler(state, kvs)
 	message.AddHandler(state, kvs)
 	delete.AddHandler(state, kvs)
+	edit.AddHandler(state, kvs)
 
 	if err := state.Open(context.Background()); err != nil {
 		log.Fatalln("Failed to connect to Discord:", err)
