@@ -14,6 +14,11 @@ import (
 	"github.com/diamondburned/arikawa/v3/state"
 )
 
+const (
+	deleteLogCollection = "deletelog"
+	deleteLogKey        = "channel"
+)
+
 func init() {
 	command.Register("deletelog", commandDeletelogObject)
 	delete.Register(deleteLogHandler)
@@ -38,7 +43,7 @@ var deleteLogHandler = delete.Handler{
 func CommandDeletelog(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, cmd *discord.CommandInteraction) command.Response {
 	if cmd.Options == nil || len(cmd.Options) != 1 {
 		log.Printf("[%s] <@%s> disabled delete log functionality", event.GuildID, event.SenderID())
-		_, err := kvs.Delete(cmd.GuildID, "deletelog", "channel")
+		_, err := kvs.Delete(event.GuildID, deleteLogCollection, deleteLogKey)
 		if err != nil {
 			log.Printf("[%s] Failed to remove Delete Log Channel setting: %s", event.GuildID, err)
 			return command.Response{Response: response.Ephemeral("Sorry, there was a hickup disabling the delete log functionality. The error was logged.")}
@@ -57,7 +62,7 @@ func CommandDeletelog(state *state.State, kvs storage.KeyValueStore, event *gate
 		return command.Response{Response: response.Ephemeral("There was a problem setting the delete log channel. It has been logged.")}
 	}
 
-	kvs.Set(event.GuildID, "deletelog", "channel", channelId)
+	kvs.Set(event.GuildID, deleteLogCollection, deleteLogKey, channelId)
 	log.Printf("[%s] <@%s> set delete logging to <#%s>", event.GuildID, event.SenderID(), channelId)
 
 	return command.Response{Response: response.Message(fmt.Sprintf("<#%s> is now the delete log channel", deleteLogChannel.ID))}
@@ -65,7 +70,7 @@ func CommandDeletelog(state *state.State, kvs storage.KeyValueStore, event *gate
 
 func DeleteLogging(state *state.State, kvs storage.KeyValueStore, event *gateway.MessageDeleteEvent) {
 	deleteLogChannelID := discord.NullChannelID
-	exist, err := kvs.GetObject(event.GuildID, "deletelog", "channel", &deleteLogChannelID)
+	exist, err := kvs.GetObject(event.GuildID, deleteLogCollection, deleteLogKey, &deleteLogChannelID)
 	if err != nil {
 		log.Printf("[%s] Message deleted, but error looking up delete log channel ID: %s", event.GuildID, err)
 		return
@@ -75,17 +80,27 @@ func DeleteLogging(state *state.State, kvs storage.KeyValueStore, event *gateway
 	}
 	message, err := state.Message(event.ChannelID, event.ID)
 	if err != nil {
-		_, sendErr := state.SendMessage(deleteLogChannelID, fmt.Sprintf("Unknown message %s in <#%s> was deleted.", event.ID, event.ChannelID))
+		_, sendErr := state.SendMessage(deleteLogChannelID, fmt.Sprintf("Unknown message %s in <#%s> was deleted. Originally posted <t:%d>", event.ID, event.ChannelID, event.ID.Time().Unix()))
 		if sendErr != nil {
 			log.Printf("[%s] UNKNOWN message deleted, error logging to delete log channel: %s", event.GuildID, err)
 		}
 		return
 	}
 
-	state.SendMessageComplex(deleteLogChannelID, api.SendMessageData{
-		Content: fmt.Sprintf("<@%s> had their message in <#%s> deleted. Originally posted <t:%d:R> ```%s```", message.Author.ID, message.ChannelID, message.Timestamp.Time().Unix(), message.Content),
+	metaMessage := fmt.Sprintf("<@%s> had their message in <#%s> deleted. Originally posted <t:%d>", message.Author.ID, message.ChannelID, message.Timestamp.Time().Unix())
+
+	if _, err := state.SendMessageComplex(deleteLogChannelID, api.SendMessageData{
+		Content: metaMessage,
+		Embeds: []discord.Embed{
+			{
+				Type:        discord.NormalEmbed,
+				Description: message.Content,
+			},
+		},
 		AllowedMentions: &api.AllowedMentions{
 			Parse: []api.AllowedMentionType{},
 		},
-	})
+	}); err != nil {
+		log.Printf("[%s] Message deleted, but error logging it: %s", event.GuildID, err)
+	}
 }
