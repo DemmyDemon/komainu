@@ -89,14 +89,25 @@ func DeleteLogging(state *state.State, kvs storage.KeyValueStore, event *gateway
 
 	metaMessage := fmt.Sprintf("<@%s> had their message in <#%s> deleted. Originally posted <t:%d>", message.Author.ID, message.ChannelID, message.Timestamp.Time().Unix())
 
+	color := discord.Color(0xFF0000)
+
+	origialContent := message.Content
+	if origialContent == "" {
+		origialContent = "No actual message, maybe it was just an image?"
+		color = discord.Color(0xFFFF00)
+	}
+
+	payload := []discord.Embed{
+		{
+			Type:        discord.NormalEmbed,
+			Description: origialContent,
+			Color:       color,
+		},
+	}
+
 	if _, err := state.SendMessageComplex(deleteLogChannelID, api.SendMessageData{
 		Content: metaMessage,
-		Embeds: []discord.Embed{
-			{
-				Type:        discord.NormalEmbed,
-				Description: message.Content,
-			},
-		},
+		Embeds:  payload,
 		AllowedMentions: &api.AllowedMentions{
 			Parse: []api.AllowedMentionType{},
 		},
