@@ -9,3 +9,7 @@ It has "tokens" that get spent for user and channel *separately*, and they are "
 
 Considering this TODONE for now.
 
+# Filtering
+
+The /inactive command could use an *optional* role filter.
+Like /inactive 30 @newbies (or whatever)

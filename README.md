@@ -10,6 +10,10 @@ You don't. It's useless. Wait for it to evolve into something useful.
 
 No. I'm not going to spend time documenting it until it's more complete.
 
+# Not even if I'm not looking to run the bot, just use the instance you run?!
+
+Allright, okay, you can have some [end user documentation](userdoc.md).
+
 # Can I help?
 
 You sure can. Pull requests are very welcome, and feel free to file issues.
