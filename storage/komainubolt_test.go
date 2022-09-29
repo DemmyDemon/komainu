@@ -43,12 +43,15 @@ func TestStorageInt(t *testing.T) {
 	found, err := kvs.Get(testGuild, col, key, &output)
 	if err != nil {
 		t.Errorf("Could not retrieve value: %v", err)
+		return
 	}
 	if !found {
 		t.Error("Value was not found when trying to read it back!")
+		return
 	}
 	if input != output {
 		t.Errorf("Expected %d, Got %d", input, output)
+		return
 	}
 }
 
@@ -73,12 +76,15 @@ func TestStorageString(t *testing.T) {
 	found, err := kvs.Get(testGuild, col, key, &output)
 	if err != nil {
 		t.Errorf("Could not retrieve value: %v", err)
+		return
 	}
 	if !found {
 		t.Error("Value was not found when trying to read it back!")
+		return
 	}
 	if input != output {
 		t.Errorf("Expected %s, Got %s", input, output)
+		return
 	}
 }
 
@@ -125,8 +131,20 @@ func TestMissingValue(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not open test file: %s", err)
 	}
-	defer func() {
+	t.Cleanup(func() {
 		kvs.Close()
 		os.Remove(filename)
-	}()
+	})
+
+	var output string
+	key := "some arbituary key"
+	found, err := kvs.Get(testGuild, col, key, &output)
+	if err != nil {
+		t.Errorf("Error getting value: %v", err)
+		return
+	}
+	if found {
+		t.Errorf("Unexpectedly got a value: %v", output)
+		return
+	}
 }

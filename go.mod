@@ -1,6 +1,6 @@
 module komainu
 
-go 1.18
+go 1.19
 
 require (
 	github.com/diamondburned/arikawa/v3 v3.0.0
