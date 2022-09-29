@@ -80,7 +80,8 @@ func CommandFaq(state *state.State, kvs storage.KeyValueStore, event *gateway.In
 		return command.Response{Response: response.Ephemeral("Invalid command structure."), Callback: nil}
 	}
 	topic := strings.ToLower(cmd.Options[0].String())
-	exists, value, err := kvs.GetString(event.GuildID, "faq", topic)
+	value := ""
+	exists, err := kvs.Get(event.GuildID, "faq", topic, &value)
 	if err != nil {
 		log.Printf("[%s] /faq failed to GetString the topic %s: %s", event.GuildID, topic, err)
 		return command.Response{Response: response.Ephemeral("An error occured, and has been logged."), Callback: nil}
@@ -116,7 +117,8 @@ func SubCommandFaqAdd(kvs storage.KeyValueStore, guildID discord.GuildID, userID
 		return response.Ephemeral("Invalid command structure.")
 	}
 	key := strings.ToLower(options[0].String())
-	_, value, err := kvs.GetString(guildID, "faq", key)
+	value := ""
+	_, err := kvs.Get(guildID, "faq", key, &value)
 	if err != nil {
 		log.Printf("[%s] /faqset add storage lookup failed: %s", guildID, err)
 		return response.Ephemeral("An error occured, and has been logged.")
@@ -145,8 +147,8 @@ func SubCommandFaqRemove(kvs storage.KeyValueStore, guildID discord.GuildID, opt
 		return response.Ephemeral("Invalid command structure.")
 	}
 	topic := strings.ToLower(options[0].String())
-	//topic := command.Options[0].String()
-	exists, value, err := kvs.GetString(guildID, "faq", topic)
+	value := ""
+	exists, err := kvs.Get(guildID, "faq", topic, &value)
 	if err != nil {
 		log.Printf("[%s] /faqset remove failed to GetString the topic %s: %s", guildID, topic, err)
 		return response.Ephemeral("An error occured, and has been logged.")
@@ -154,16 +156,11 @@ func SubCommandFaqRemove(kvs storage.KeyValueStore, guildID discord.GuildID, opt
 	if !exists {
 		return response.Ephemeral(fmt.Sprintf("Sorry, I've never heard of %s", topic))
 	}
-	removed, err := kvs.Delete(guildID, "faq", topic)
+	err = kvs.Delete(guildID, "faq", topic)
 	if err != nil {
 		log.Printf("[%s] /faqset remove failed to Delete the topic %s: %s", guildID, topic, err)
 		return response.Ephemeral("An error occured, and has been logged.")
 	}
-	if !removed {
-		// Is it even possible to get here?
-		return response.Ephemeral(fmt.Sprintf("Sorry, I've never heard of %s", topic))
-	}
-
 	return response.MessageNoMention(fmt.Sprintf("Forgot %s: %s", topic, value))
 }
 

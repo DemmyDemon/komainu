@@ -43,7 +43,7 @@ var deleteLogHandler = delete.Handler{
 func CommandDeletelog(state *state.State, kvs storage.KeyValueStore, event *gateway.InteractionCreateEvent, cmd *discord.CommandInteraction) command.Response {
 	if cmd.Options == nil || len(cmd.Options) != 1 {
 		log.Printf("[%s] <@%s> disabled delete log functionality", event.GuildID, event.SenderID())
-		_, err := kvs.Delete(event.GuildID, deleteLogCollection, deleteLogKey)
+		err := kvs.Delete(event.GuildID, deleteLogCollection, deleteLogKey)
 		if err != nil {
 			log.Printf("[%s] Failed to remove Delete Log Channel setting: %s", event.GuildID, err)
 			return command.Response{Response: response.Ephemeral("Sorry, there was a hickup disabling the delete log functionality. The error was logged.")}
@@ -70,7 +70,7 @@ func CommandDeletelog(state *state.State, kvs storage.KeyValueStore, event *gate
 
 func DeleteLogging(state *state.State, kvs storage.KeyValueStore, event *gateway.MessageDeleteEvent) {
 	deleteLogChannelID := discord.NullChannelID
-	exist, err := kvs.GetObject(event.GuildID, deleteLogCollection, deleteLogKey, &deleteLogChannelID)
+	exist, err := kvs.Get(event.GuildID, deleteLogCollection, deleteLogKey, &deleteLogChannelID)
 	if err != nil {
 		log.Printf("[%s] Message deleted, but error looking up delete log channel ID: %s", event.GuildID, err)
 		return

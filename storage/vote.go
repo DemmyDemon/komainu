@@ -84,7 +84,7 @@ func (vote *Vote) String() (voteText string) {
 
 // GetVote gets a specific vote for the given guild and message. Returns a boolean to let you know if the vote exists, that Vote object if it does and any error that occured fetching it.
 func GetVote(kvs KeyValueStore, guildID discord.GuildID, messageID discord.MessageID) (exist bool, vote *Vote, err error) {
-	exist, err = kvs.GetObject(guildID, "votes", messageID, &vote)
+	exist, err = kvs.Get(guildID, "votes", messageID, &vote)
 	return exist, vote, err
 }
 
@@ -127,19 +127,16 @@ func CloseExpiredVotes(state *state.State, kvs KeyValueStore) error {
 		}
 		for _, key := range keys {
 			vote := Vote{}
-			exist, err := kvs.GetObject(guild.ID, "votes", key, &vote)
+			exist, err := kvs.Get(guild.ID, "votes", key, &vote)
 			if err != nil {
 				return fmt.Errorf("closing expired votes could not obtain vote object: %w", err)
 			}
 			if exist {
 				if vote.ChannelID == discord.NullChannelID || vote.ChannelID == 0 {
 					log.Printf("[%s] Closing expired votes encountered vote with no channel ID -- PURGING", guild.ID)
-					bahleeted, err := kvs.Delete(guild.ID, "votes", key)
+					err := kvs.Delete(guild.ID, "votes", key)
 					if err != nil {
 						log.Printf("[%s] Error purging invalid vote: %s\n", guild.ID, err)
-					}
-					if bahleeted {
-						log.Printf("[%s] Purge successful.", guild.ID)
 					}
 					continue
 				}
@@ -151,7 +148,7 @@ func CloseExpiredVotes(state *state.State, kvs KeyValueStore) error {
 					if err != nil {
 						return fmt.Errorf("closing expired votes could not update vote message: %w", err)
 					}
-					_, err = kvs.Delete(guild.ID, "votes", key)
+					err = kvs.Delete(guild.ID, "votes", key)
 					if err != nil {
 						return fmt.Errorf("encoutered an error removing expired vote: %w", err)
 					}

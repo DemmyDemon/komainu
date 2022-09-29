@@ -247,10 +247,10 @@ func CommandActiveRole(state *state.State, kvs storage.KeyValueStore, event *gat
 	}
 
 	if days == 0 {
-		if _, err := kvs.Delete(event.GuildID, "activerole", "days"); err != nil {
+		if err := kvs.Delete(event.GuildID, "activerole", "days"); err != nil {
 			log.Printf("[%s] Tried to disable activerole, but %s", event.GuildID, err)
 		}
-		if _, err := kvs.Delete(event.GuildID, "activerole", "role"); err != nil {
+		if err := kvs.Delete(event.GuildID, "activerole", "role"); err != nil {
 			log.Printf("[%s] Tried to disable activerole, however %s", event.GuildID, err)
 		}
 		return command.Response{Response: response.Message("So noted. Feature disabled."), Callback: nil}

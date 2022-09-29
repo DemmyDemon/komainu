@@ -18,7 +18,10 @@ func See(kvs KeyValueStore, guildID discord.GuildID, userID discord.UserID) erro
 
 // LastSeen checks to see when the given user was seen in the given guild.
 func LastSeen(kvs KeyValueStore, guildID discord.GuildID, userID discord.UserID) (bool, int64, error) {
-	return kvs.GetInt64(guildID, "seen", userID)
+	var seenTimestamp int64
+	exist, err := kvs.Get(guildID, "seen", userID, &seenTimestamp)
+	return exist, seenTimestamp, err
+
 }
 
 func MaybeGiveActiveRole(kvs KeyValueStore, state *state.State, guildID discord.GuildID, member *discord.Member) (err error) {
@@ -31,7 +34,7 @@ func MaybeGiveActiveRole(kvs KeyValueStore, state *state.State, guildID discord.
 	}
 
 	role := discord.NullRoleID
-	exist, err := kvs.GetObject(guildID, "activerole", "role", &role)
+	exist, err := kvs.Get(guildID, "activerole", "role", &role)
 	if err != nil {
 		return fmt.Errorf("MaybeGiveActiveRole GetObject: %w", err)
 	}
@@ -50,7 +53,7 @@ func MaybeGiveActiveRole(kvs KeyValueStore, state *state.State, guildID discord.
 
 func RemoveActiveRole(kvs KeyValueStore, state *state.State, guildID discord.GuildID, member *discord.Member) error {
 	role := discord.NullRoleID
-	exist, err := kvs.GetObject(guildID, "activerole", "role", &role)
+	exist, err := kvs.Get(guildID, "activerole", "role", &role)
 	if err != nil {
 		return fmt.Errorf("RemoveActiveRole GetObject: %w", err)
 	}
@@ -74,7 +77,7 @@ func RevokeActiveRoles(state *state.State, kvs KeyValueStore) error {
 	secondsInDay := float64(24 * 60 * 60)
 	for _, guild := range guilds {
 		role := discord.NullRoleID
-		exist, err := kvs.GetObject(guild.ID, "activerole", "role", &role)
+		exist, err := kvs.Get(guild.ID, "activerole", "role", &role)
 		if err != nil {
 			log.Printf("[%s] Failed to fetch the active role object: %s\n", guild.ID, err)
 		}
@@ -82,7 +85,8 @@ func RevokeActiveRoles(state *state.State, kvs KeyValueStore) error {
 			continue // Because if the role isn't set, this guild has no "active role"
 		}
 
-		exist, days, err := kvs.GetFloat64(guild.ID, "activerole", "days")
+		var days float64
+		exist, err = kvs.Get(guild.ID, "activerole", "days", &days)
 		if err != nil {
 			log.Printf("[%s] Failed to fetch the active role time: %s\n", guild.ID, err)
 		}

@@ -72,7 +72,7 @@ func DeleteVote(state *state.State, kvs storage.KeyValueStore, e *gateway.Messag
 	if e.GuildID == discord.NullGuildID {
 		return
 	}
-	_, err := kvs.Delete(e.GuildID, "votes", e.ID)
+	err := kvs.Delete(e.GuildID, "votes", e.ID)
 	if err != nil {
 		log.Printf("[%s] Encountered an error removing vote from KVS after message deletion: %s\n", e.GuildID, err)
 	}
