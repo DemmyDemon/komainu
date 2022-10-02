@@ -17,6 +17,15 @@ Gives anyone that speaks the Chatterbox role for 30 days.
 
 "Speaks" refers to regular text chat only. It does not count status changes or reactions to messages, only to sending messages of your own. Note that this only counts messages the bot has seen, so any message in a channel the bot doesn't have access to doesn't count. If the bot was offline when the message was sent it is not counted either.
 
+### /ateball
+
+This is just for fun. It's like a magic 8-ball, but food themed, for some weird reason. It takes a single argument: `question`.
+
+The question is required, as it is echoed back when answering the question, but it does not impact the answer in any way what so ever. A random answer will be picked, along with a random food-related emoji.
+
+Example: `/ateball Will my crush finally notice me?`  
+This will make the bot crush your dreams, possibly with a food-related pun.
+
 ### /deletelog
 
 This allows you to have the bot monitor for messages being deleted, and put a notice about it (possibly containing the message) in the channel of your choice. It takes a single argument:  `channel`.
