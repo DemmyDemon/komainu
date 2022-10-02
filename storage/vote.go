@@ -73,7 +73,11 @@ func (vote *Vote) String() (voteText string) {
 
 	for _, option := range keys {
 		count := tally[option]
-		fmt.Fprintf(&sb, "**%s** (%d votes)\n", option, count)
+		plural := "s"
+		if count == 1 {
+			plural = ""
+		}
+		fmt.Fprintf(&sb, "**%s** (%d vote%s)\n", option, count, plural)
 	}
 	return sb.String()
 }
