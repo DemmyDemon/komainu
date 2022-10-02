@@ -34,7 +34,7 @@ type Secret struct {
 	Created time.Time
 }
 
-var modalMaxAge time.Duration = time.Minute * 15
+var modalMaxAge time.Duration = time.Hour * 24
 
 // modals holds the modal handlers to accept.
 var modals = map[string]Handler{}
@@ -58,6 +58,16 @@ func AddHandler(state *state.State, kvs storage.KeyValueStore) {
 					response := val.Code(state, kvs, e, interaction)
 					if err := state.RespondInteraction(e.ID, e.Token, response.Response); err != nil {
 						log.Printf("[%s] Failed to send modal interaction response: %s", e.GuildID, err)
+					}
+					if response.Callback != nil {
+						message, err := state.InteractionResponse(e.AppID, e.Token)
+						if err != nil {
+							log.Printf("Error %s getting message reference for %s modal callback\n", err, id)
+							return
+						}
+						if message != nil && message.ID != discord.NullMessageID {
+							response.Callback(message)
+						}
 					}
 				} else {
 					log.Printf("[%s] has UNKNOWN modal interaction %#v", e.GuildID, secret)
@@ -139,6 +149,7 @@ func Respond(user discord.UserID, guild discord.GuildID, name string, title stri
 	}
 }
 
+// TODO: Figure out if I can get more than one per row, or more than 5 per container, or whatnot.
 func generateModalComponents(tics []discord.TextInputComponent) *discord.ContainerComponents {
 	container := make(discord.ContainerComponents, len(tics))
 	for i := 0; i < len(tics); i++ {
