@@ -104,4 +104,13 @@ This will tell you when `@Demonen` last sent a message in this Discord guild.
 
 ### /vote
 
-This is for initating votes. It is currently being redesigned, and **should not be used**.
+This is for initating votes. It will *not* disclose who voted what. It takes a single artument:  `length`.
+
+In this context, `length` is the vote length in *days*, as a *floating point* number of 24 hour periods.
+
+Example: `/vote 0.5`  
+This will initiate a vote that will run for 12 hours before closing.
+
+You will be prompted for a text to describe what is being voted on, and for a list of options. The options list is just a large input field, where each line is a separate option.  
+The options can be up to 100 characters long. Anything longer than that will be cut off without warning.  
+There can be a maximum of 25 options. Any more will also be cut off without warning.
