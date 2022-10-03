@@ -1,6 +1,7 @@
 package interactions
 
 import (
+	"errors"
 	"fmt"
 	"komainu/interactions/command"
 	"komainu/interactions/component"
@@ -27,31 +28,9 @@ func init() {
 	modal.Register("votestart", modal.Handler{Code: VoteModalHandler})
 }
 
-func BuildVoteOptions() []discord.CommandOption {
-	options := make([]discord.CommandOption, 25)
-
-	options[0] = &discord.NumberOption{
-		OptionName:  "length",
-		Description: "The number of days the vote should run.",
-		Required:    true,
-		Min:         option.NewFloat(0),
-		Max:         option.NewFloat(365),
-	}
-	for i := 1; i <= 24; i++ {
-		options[i] = &discord.StringOption{
-			OptionName:  "option" + strconv.Itoa(i),
-			Description: "Vote option",
-			Required:    i < 3,
-		}
-	}
-
-	return options
-}
-
 var commandVoteObject = command.Handler{
 	Description: "Initiate a vote",
 	Code:        CommandVote,
-	// Options:     buildVoteOptions(),
 	Options: []discord.CommandOption{
 		&discord.NumberOption{
 			OptionName:  "length",
@@ -76,7 +55,7 @@ func DeleteVote(state *state.State, kvs storage.KeyValueStore, e *gateway.Messag
 
 // ComponentVote attempts to handle the given interaction as a vote
 func ComponentVote(state *state.State, kvs storage.KeyValueStore, e *gateway.InteractionCreateEvent, interaction discord.ComponentInteraction) api.InteractionResponse {
-	isVote, resp, err := storage.HandleInteractionAsVote(state, kvs, e, interaction)
+	isVote, resp, err := handleInteractionAsVote(state, kvs, e, interaction)
 	if err != nil {
 		log.Printf("[%s] error while trying to handle an interaction as a vote: %s\n", e.GuildID, err)
 		return response.Ephemeral("Something went wrong. It was logged, so hopefully it'll get fixed.")
@@ -174,13 +153,77 @@ func VoteModalHandler(state *state.State, kvs storage.KeyValueStore, event *gate
 			Type: api.MessageInteractionWithSource,
 			Data: &api.InteractionResponseData{
 				Content:    option.NewNullableString(vote.String()),
-				Components: vote.Selector(),
+				Components: makeVoteSelector(&vote),
 			},
 		},
 		Callback: func(message *discord.Message) {
 			vote.MessageID = message.ID
 			vote.ChannelID = message.ChannelID
-			vote.Store(kvs)
+			err := vote.Store(kvs)
+			if err != nil {
+				log.Printf("[%s] Failed to save vote afer adding MessageID (%s) and ChannelID (%s)", vote.GuildID, message.ID, message.ChannelID)
+			}
 		},
 	}
+}
+
+func makeVoteSelector(vote *storage.Vote) *discord.ContainerComponents {
+	var selectable []discord.SelectOption
+	for key, label := range vote.Options {
+		selectable = append(selectable, discord.SelectOption{
+			Label: label,
+			Value: key,
+		})
+	}
+	row := discord.ActionRowComponent([]discord.InteractiveComponent{
+		&discord.SelectComponent{
+			Options:     selectable,
+			CustomID:    "vote",
+			Placeholder: "Cast your vote!",
+			ValueLimits: [2]int{0, 1},
+		},
+	})
+	return discord.ComponentsPtr(&row)
+}
+
+// handleInteractionAsVote determines if the given interaction is a vote button click, and acts accordingly.
+func handleInteractionAsVote(state *state.State, kvs storage.KeyValueStore, e *gateway.InteractionCreateEvent, interaction discord.ComponentInteraction) (isVote bool, response string, err error) {
+	exist, vote, err := storage.GetVote(kvs, e.GuildID, e.Message.ID)
+	if err != nil {
+		return true, "Something very odd happened.", fmt.Errorf("handling interaction as vote: %w", err)
+	}
+	if !exist {
+		return false, "", nil
+	}
+
+	now := time.Now().Unix()
+	if vote.EndTime <= now {
+		return true, "I'm sorry, that vote is closed!", nil
+	}
+
+	selector, ok := interaction.(*discord.SelectInteraction)
+
+	if !ok {
+		return true, "Your response was not in the right format, somehow?!", errors.New("submitted vote was not from a SelectInteraction")
+	}
+
+	if len(selector.Values) != 1 {
+		return true, "You must select exactly one item", fmt.Errorf("%d values selected in vote, expected 1", len(selector.Values))
+	}
+
+	voted := selector.Values[0]
+
+	label, ok := vote.Options[voted]
+	if !ok {
+		return true, "Sorry, you can't vote for that.", fmt.Errorf("vote cast for %s, which is not an option", voted)
+	}
+
+	vote.Votes[e.SenderID()] = voted
+	if _, err := state.EditMessage(e.ChannelID, e.Message.ID, vote.String()); err != nil {
+		return true, "There was an error registering your vote.", fmt.Errorf("handling interaction as vote: %w", err)
+	}
+	if err := vote.Store(kvs); err != nil {
+		return true, "There was an error storing your vote.", fmt.Errorf("storing a vote: %w", err)
+	}
+	return true, fmt.Sprintf("Your vote for...\n%s\n...is registered.", label), nil
 }
