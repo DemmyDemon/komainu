@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"sort"
@@ -10,7 +9,6 @@ import (
 
 	"github.com/diamondburned/arikawa/v3/api"
 	"github.com/diamondburned/arikawa/v3/discord"
-	"github.com/diamondburned/arikawa/v3/gateway"
 	"github.com/diamondburned/arikawa/v3/state"
 	"github.com/diamondburned/arikawa/v3/utils/json/option"
 )
@@ -41,9 +39,9 @@ func (vote *Vote) Tally() (tally map[string]int, keys []string) {
 		tally[label] = 0
 		keys = append(keys, label)
 	}
-	for _, option := range vote.Votes {
+	for _, opt := range vote.Votes {
 		optionLabel := "!!UNKNOWN OPTION!!"
-		if label, ok := vote.Options[option]; ok {
+		if label, ok := vote.Options[opt]; ok {
 			optionLabel = label
 		}
 		if _, ok := tally[optionLabel]; ok {
@@ -71,97 +69,21 @@ func (vote *Vote) String() (voteText string) {
 		fmt.Fprintf(&sb, "%s\n\nCloses <t:%d:R>.\n\n", vote.Question, vote.EndTime)
 	}
 
-	for _, option := range keys {
-		count := tally[option]
+	for _, opt := range keys {
+		count := tally[opt]
 		plural := "s"
 		if count == 1 {
 			plural = ""
 		}
-		fmt.Fprintf(&sb, "**%s** (%d vote%s)\n", option, count, plural)
+		fmt.Fprintf(&sb, "**%s** (%d vote%s)\n", opt, count, plural)
 	}
 	return sb.String()
-}
-
-func (vote *Vote) Buttons() *discord.ContainerComponents {
-	buttons := []discord.InteractiveComponent{}
-	for key, value := range vote.Options {
-		button := &discord.ButtonComponent{
-			Style:    discord.PrimaryButtonStyle(),
-			CustomID: discord.ComponentID(key),
-			Label:    value,
-		}
-		buttons = append(buttons, button)
-	}
-	row := discord.ActionRowComponent(buttons)
-	return discord.ComponentsPtr(&row)
-}
-
-func (vote *Vote) Selector() *discord.ContainerComponents {
-	selectable := []discord.SelectOption{}
-	for key, label := range vote.Options {
-		selectable = append(selectable, discord.SelectOption{
-			Label: label,
-			Value: key,
-		})
-	}
-	row := discord.ActionRowComponent([]discord.InteractiveComponent{
-		&discord.SelectComponent{
-			Options:     selectable,
-			CustomID:    "vote",
-			Placeholder: "Cast your vote!",
-			ValueLimits: [2]int{0, 1},
-		},
-	})
-	return discord.ComponentsPtr(&row)
 }
 
 // GetVote gets a specific vote for the given guild and message. Returns a boolean to let you know if the vote exists, that Vote object if it does and any error that occured fetching it.
 func GetVote(kvs KeyValueStore, guildID discord.GuildID, messageID discord.MessageID) (exist bool, vote *Vote, err error) {
 	exist, err = kvs.Get(guildID, "votes", messageID, &vote)
 	return exist, vote, err
-}
-
-// HandleInteractionAsVote determines if the given interaction is a vote button click, and acts accordingly.
-func HandleInteractionAsVote(state *state.State, kvs KeyValueStore, e *gateway.InteractionCreateEvent, interaction discord.ComponentInteraction) (isVote bool, response string, err error) {
-	exist, vote, err := GetVote(kvs, e.GuildID, e.Message.ID)
-	if err != nil {
-		return true, "Something very odd happened.", fmt.Errorf("handling interaction as vote: %w", err)
-	}
-	if !exist {
-		return false, "", nil
-	}
-
-	now := time.Now().Unix()
-	if vote.EndTime <= now {
-		return true, "I'm sorry, that vote is closed!", nil
-	}
-
-	selector, ok := interaction.(*discord.SelectInteraction)
-
-	if !ok {
-		return true, "Your response was not in the right format, somehow?!", errors.New("submitted vote was not from a SelectInteraction")
-	}
-
-	if len(selector.Values) != 1 {
-		return true, "You must select exactly one item", fmt.Errorf("%d values selected in vote, expected 1", len(selector.Values))
-	}
-
-	voted := selector.Values[0]
-
-	label, ok := vote.Options[voted]
-	if !ok {
-		return true, "Sorry, you can't vote for that.", fmt.Errorf("vote cast for %s, which is not an option", voted)
-	}
-
-	vote.Votes[e.SenderID()] = voted
-	if _, err := state.EditMessage(e.ChannelID, e.Message.ID, vote.String()); err != nil {
-		return true, "There was an error registering your vote.", fmt.Errorf("handling interaction as vote: %w", err)
-	}
-	if err := vote.Store(kvs); err != nil {
-		return true, "There was an error storing your vote.", fmt.Errorf("storing a vote: %w", err)
-	}
-	return true, fmt.Sprintf("Your vote for...\n%s\n...is registered.", label), nil
-
 }
 
 // CloseExpiredVotes iterates over all the known votes in the connected guilds, and closes the ended ones.
@@ -211,7 +133,7 @@ func CloseExpiredVotes(state *state.State, kvs KeyValueStore) error {
 }
 
 // StartClosingExpiredVotes starts a ticker and, once a minute, calls CloseExpiredVotes.
-// Intednded to be called as a goroutine.
+// Intended to be called as a goroutine.
 func StartClosingExpiredVotes(state *state.State, kvs KeyValueStore) {
 	ticker := time.NewTicker(1 * time.Minute)
 	for {
