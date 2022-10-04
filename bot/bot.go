@@ -8,6 +8,8 @@ import (
 	"komainu/interactions/component"
 	"komainu/interactions/delete"
 	"komainu/interactions/edit"
+	"komainu/interactions/join"
+	"komainu/interactions/leave"
 	"komainu/interactions/message"
 	"komainu/interactions/modal"
 	"komainu/storage"
@@ -29,12 +31,6 @@ func Connect(cfg *storage.Configuration, kvs storage.KeyValueStore) *state.State
 
 	addBoatloadOfIntents(state)
 
-	// TODO: interactions/guildcreate package and register there?
-	// I mean, this'll be moot once everyone is running this version anyway.
-	state.AddHandler(func(e *gateway.GuildCreateEvent) {
-		command.ClearObsoleteCommands(state, e.ID)
-	})
-
 	command.AddHandler(state, kvs)
 	autocomplete.AddHandler(state, kvs)
 	modal.AddHandler(state, kvs)
@@ -42,6 +38,8 @@ func Connect(cfg *storage.Configuration, kvs storage.KeyValueStore) *state.State
 	message.AddHandler(state, kvs)
 	delete.AddHandler(state, kvs)
 	edit.AddHandler(state, kvs)
+	join.AddHandler(state, kvs)
+	leave.AddHandler(state, kvs)
 
 	if err := state.Open(context.Background()); err != nil {
 		log.Fatalln("Failed to connect to Discord:", err)
@@ -57,7 +55,8 @@ func Connect(cfg *storage.Configuration, kvs storage.KeyValueStore) *state.State
 		log.Fatalf("Error during command registration: %s", err)
 	}
 
-	// TODO: Maybe move these to init() in the relevant packages?
+	// I was wondering if this should be init() in those specific files.
+	// This is a bad idea, however, as they only really work after connecting.
 	go storage.StartClosingExpiredVotes(state, kvs)
 	go storage.StartRevokingActiveRole(state, kvs)
 

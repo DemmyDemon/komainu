@@ -57,7 +57,7 @@ func Register(name string, command Handler) {
 	commands[name] = command
 }
 
-// AddHandler adds handler for commands, but also the GuildCreate event for command registration.
+// AddHandler adds handler for commands. You might have guessed that, but here we are.
 func AddHandler(state *state.State, kvs storage.KeyValueStore) {
 	state.AddHandler(func(e *gateway.InteractionCreateEvent) {
 		if interaction, ok := e.Data.(*discord.CommandInteraction); ok {
@@ -128,28 +128,4 @@ func RegisterCommands(state *state.State) error {
 	}
 	log.Printf("%d commands successfully registered", len(registered))
 	return nil
-}
-
-// ClearObsoleteCommands removes the old, obsolete, per-guild-registered commands.
-func ClearObsoleteCommands(state *state.State, guildID discord.GuildID) {
-	app, err := state.CurrentApplication()
-	if err != nil {
-		log.Println("Failed to clear obsolete commands: Could not determine app ID:", err)
-		return
-	}
-
-	currentCommands, err := state.GuildCommands(app.ID, guildID)
-	if err != nil {
-		log.Printf("[%s] Failed to clear obsolete commands: Could not determine current guild commands:%s\n", guildID, err)
-		return
-	}
-	for _, command := range currentCommands {
-		if command.AppID == app.ID {
-			if err := state.DeleteGuildCommand(app.ID, guildID, command.ID); err != nil {
-				log.Printf("[%s] Tried to remove obsolete Guild command /%s, but %s\n", guildID, command.Name, err)
-			} else {
-				log.Printf("[%s] Successfully removed obsolete Guild command /%s\n", guildID, command.Name)
-			}
-		}
-	}
 }

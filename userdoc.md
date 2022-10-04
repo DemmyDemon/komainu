@@ -111,6 +111,17 @@ Much like `/inactive` and `/neverseen`, this will check when someone last sent a
 Example: `/seen @Demonen`  
 This will tell you when `@Demonen` last sent a message in this Discord guild.
 
+### /trafficlog
+
+Makes the bot log when someone joins or leaves the server. It takes a single *optional* argument:  `channel`.  
+
+The `channel` is any already existing channel that the bot has access to sending messages in. If you leave this blank, the feature is turned off.
+
+Note that it does not differentiate between volentarily leaving and being kicked/banned. Leaving is just leaving.
+
+Example: `/trafficlog #marblecake`  
+This will make anyone joining or leaving be announced in the `#markecake` text channel.
+
 ### /vote
 
 This is for initating votes. It will *not* disclose who voted what. It takes a single artument:  `length`.
