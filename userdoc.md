@@ -120,7 +120,7 @@ The `channel` is any already existing channel that the bot has access to sending
 Note that it does not differentiate between volentarily leaving and being kicked/banned. Leaving is just leaving.
 
 Example: `/trafficlog #marblecake`  
-This will make anyone joining or leaving be announced in the `#markecake` text channel.
+This will make anyone joining or leaving be announced in the `#marblecake` text channel.
 
 ### /vote
 
