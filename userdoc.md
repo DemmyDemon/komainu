@@ -95,6 +95,19 @@ This is very similar to `/inactive`, but lists only those that have never been s
 Example:  `/neverseen`  
 This will present you with a text file named `never_seen_report_(current date here).txt`, containing everyone currently in the Discord guild that the bot has not yet seen send any messages. Alongside the user will be their join date so you know if they've been lurking for 6 months or 3 minutes.
 
+### /rolebutton
+
+This allows you to create a message with a button below it. Any user that clicks the button will be given a role. It takes a single *optional* argument: `role`
+
+Example: `/rolebutton @Programmer`  
+This will prompt you for a preamble text that will help the user decide if they want to press the button.  
+You will also be asked for a Role ID. In the example, this will be the ID of the role `@Programmer`, but you can provide a different one if you like.  
+It will also asked for the text that should appear on the button.
+
+### /roleselect
+
+TODO: Oh boy, this is kind of complicated. Documentation *is* coming, I just need to sort out how to best describe it.
+
 ### /seeeveryone
 
 This will actively subvert `/inactive` and `/neverseen` and store every last current member of the Discord guild as if they've sent a message *right now*. It takes no arguments.
