@@ -82,7 +82,7 @@ func joinLogging(state *state.State, kvs storage.KeyValueStore, event *gateway.G
 		return
 	}
 	_, err := state.SendMessageComplex(channelID, api.SendMessageData{
-		Content: fmt.Sprintf("%s has joined the server", event.Member.User.Mention()),
+		Content: fmt.Sprintf("%s (%s#%s) has joined the server", event.Member.User.Mention(), event.User.Username, event.User.Discriminator),
 		AllowedMentions: &api.AllowedMentions{
 			Parse: []api.AllowedMentionType{},
 		},
@@ -98,7 +98,7 @@ func leaveLogging(state *state.State, kvs storage.KeyValueStore, event *gateway.
 		return
 	}
 	_, err := state.SendMessageComplex(channelID, api.SendMessageData{
-		Content: fmt.Sprintf("%s has left the server", event.User.ID.Mention()),
+		Content: fmt.Sprintf("%s (%s#%s) has left the server", event.User.ID.Mention(), event.User.Username, event.User.Discriminator),
 		AllowedMentions: &api.AllowedMentions{
 			Parse: []api.AllowedMentionType{},
 		},
